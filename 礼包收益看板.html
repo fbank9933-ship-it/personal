@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>满资源推演看板 · 风林火山</title>
+<style>
+:root{
+  --bg:#0e1320;--panel:#161d2e;--panel2:#1c2540;--line:#29344f;--txt:#e7ecf7;--sub:#93a2c0;
+  --accent:#5b8cff;--good:#2fc98b;--warn:#f5b942;--bad:#f4685f;--chip:#22304d;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);
+  font:14px/1.55 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
+a{color:var(--accent)}
+header{padding:22px 26px 14px;border-bottom:1px solid var(--line);
+  background:linear-gradient(120deg,#141c30,#0e1320 70%)}
+header h1{margin:0;font-size:20px;letter-spacing:.5px}
+header p{margin:6px 0 0;color:var(--sub);font-size:13px}
+.wrap{padding:18px 26px 60px;max-width:1500px;margin:0 auto}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:6px 0 18px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.kpi .v{font-size:22px;font-weight:700;margin-top:4px}
+.kpi .l{color:var(--sub);font-size:12px}
+.kpi .s{color:var(--sub);font-size:11px;margin-top:2px}
+section{background:var(--panel);border:1px solid var(--line);border-radius:14px;margin-bottom:18px;overflow:hidden}
+section>h2{margin:0;padding:14px 18px;font-size:15px;border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:10px;background:var(--panel2)}
+section>h2 .tag{font-weight:400;color:var(--sub);font-size:12px}
+section h3{margin:0;padding:10px 18px 8px;font-size:13px;border-top:1px solid var(--line);
+  background:rgba(91,140,255,.06);display:flex;align-items:center;gap:8px}
+section h3 .tag{font-weight:400;color:var(--sub);font-size:12px}
+.hint{color:var(--sub);font-size:12px;padding:10px 18px 0}
+.pad{padding:14px 18px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--sub);font-weight:600;position:sticky;top:0;background:var(--panel2);z-index:1}
+td.num,th.num{text-align:right}
+tr:hover td{background:rgba(91,140,255,.06)}
+.tblwrap{max-height:360px;overflow:auto}
+input,select,button{font:inherit;color:var(--txt);background:#0f1626;border:1px solid var(--line);
+  border-radius:8px;padding:5px 8px;outline:none}
+input:focus,select:focus{border-color:var(--accent)}
+button{cursor:pointer;background:#22304d;border-color:#31406a}
+button:hover{background:#2b3c60}
+button.primary{background:var(--accent);border-color:var(--accent);color:#08122c;font-weight:700}
+button.ghost{background:transparent}
+.bar{height:8px;border-radius:6px;background:#243252;position:relative;overflow:hidden;min-width:60px}
+.bar>i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#5b8cff,#2fc98b)}
+.itm{color:var(--sub);font-size:12px}
+.flex{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.designer-row{display:grid;grid-template-columns:1.4fr 1fr auto;gap:8px;margin-bottom:6px;max-width:520px}
+hr{border:none;border-top:1px solid var(--line);margin:0}
+.footer{color:var(--sub);font-size:12px;text-align:center;padding:10px}
+.note{background:rgba(91,140,255,.08);border-left:3px solid var(--accent);padding:8px 12px;
+  border-radius:6px;color:var(--sub);font-size:12px;margin:10px 18px}
+.d-good{color:var(--good)} .d-mid{color:var(--warn)} .d-bad{color:var(--bad)}
+</style>
+</head>
+<body>
+<header>
+  <h1>满资源推演看板 · 风林火山</h1>
+  <p>单账号「满资源」花费与时间推演　｜　赠送 / 进度 / 商城 三模块联动</p>
+</header>
+<div class="wrap">
+
+  <div class="kpis" id="kpis"></div>
+
+  <!-- ① 资源目标 -->
+  <section>
+    <h2>① 资源目标 <span class="tag">需求总量 = 练满所需；单价按内容自动计算（平均成本法）</span></h2>
+    <div class="note">需求总量来自成长数据（宠物成长饼干 / 升星 / 四圣），可手动修改。<br>
+    单价为<b>自动计算</b>，无需手动填：单价 = 含该资源的商城礼包售价之和 ÷ 该资源在全部模块中的获得量之和；进度/赠送等免费来源会拉低单价；无任何来源的资源单价为 0。单价仅用于礼包性价比排序，不影响总金额与天数结论。</div>
+    <div class="tblwrap"><table id="targetTbl">
+      <thead><tr>
+        <th>资源</th><th class="num">单价(元/单位) · 自动</th><th class="num">需求总量</th>
+        <th class="num">需求价值(元)</th><th style="width:180px">占比</th>
+      </tr></thead><tbody></tbody>
+    </table></div>
+  </section>
+
+  <!-- ② 进度模块 -->
+  <section>
+    <h2>② 进度模块 <span class="tag">游戏内活动免费获得（按周期累积）</span></h2>
+    <div class="tblwrap"><table id="proTbl">
+      <thead><tr><th>名称</th><th>资源内容</th><th class="num">周期(天)</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <div class="pad">
+      <div class="flex">
+        <span>名称</span><input id="proName" placeholder="如：每日任务" style="width:170px"/>
+        <span>周期(天)</span><input id="proDays" type="number" min="1" step="1" value="1" style="width:70px"/>
+      </div>
+      <div class="flex" style="margin-top:8px">
+        <span>智能识别</span>
+        <input id="proText" placeholder="粘贴礼包内容自动识别，如：红玉50、蓝玉200、饼干1万" style="flex:1;min-width:260px"/>
+      </div>
+      <div id="proRows" style="margin:10px 0 0"></div>
+      <div class="flex" style="margin-top:10px">
+        <button id="proAddRow">+ 资源</button>
+        <button class="primary" id="proCommit">加入进度模块</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ③ 赠送模块 -->
+  <section>
+    <h2>③ 赠送模块 <span class="tag">日累充 / 总累充 / 赠送礼包（与商城消费联动）</span></h2>
+
+    <h3>③-1 日累充赠送 <span class="tag">当日商城消费 ≥ 门槛即获得（与商城模块联动，可发多资源）</span></h3>
+    <div class="tblwrap"><table id="gdTbl">
+      <thead><tr><th class="num">每日门槛(元)</th><th>资源内容</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <div class="pad">
+      <div class="flex">
+        <span>门槛(元)</span><input id="gdTh" type="number" min="0" step="1" value="300" style="width:90px"/>
+        <span style="color:var(--sub);font-size:12px">达标后发放下方全部资源</span>
+      </div>
+      <div class="flex" style="margin-top:8px">
+        <span>智能识别</span>
+        <input id="gdText" placeholder="粘贴内容自动识别，如：门槛300 红玉50、蓝玉200、饼干1万" style="flex:1;min-width:260px"/>
+      </div>
+      <div id="gdRows" style="margin:10px 0 0"></div>
+      <div class="flex" style="margin-top:10px">
+        <button id="gdAddRow">+ 资源</button>
+        <button class="primary" id="gdCommit">加入</button>
+      </div>
+    </div>
+
+    <h3>③-2 总累充赠送 <span class="tag">累计充值达标后一次性发放（累计充值 = 商城消费，可发多资源）</span></h3>
+    <div class="tblwrap"><table id="gtTbl">
+      <thead><tr><th class="num">累计门槛(元)</th><th>资源内容</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <div class="pad">
+      <div class="flex">
+        <span>累计门槛(元)</span><input id="gtTh" type="number" min="0" step="1" value="1000" style="width:100px"/>
+        <span style="color:var(--sub);font-size:12px">达标后一次性发放下方全部资源</span>
+      </div>
+      <div class="flex" style="margin-top:8px">
+        <span>智能识别</span>
+        <input id="gtText" placeholder="粘贴内容自动识别，如：累计充值1000 红玉500、蓝玉2000" style="flex:1;min-width:260px"/>
+      </div>
+      <div id="gtRows" style="margin:10px 0 0"></div>
+      <div class="flex" style="margin-top:10px">
+        <button id="gtAddRow">+ 资源</button>
+        <button class="primary" id="gtCommit">加入</button>
+      </div>
+    </div>
+
+    <h3>③-3 赠送礼包 <span class="tag">免费赠送；周期填 0 = 仅首次发放</span></h3>
+    <div class="tblwrap"><table id="gpTbl">
+      <thead><tr><th>名称</th><th>资源内容</th><th class="num">周期(天)</th><th class="num">价值(元)</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <div class="pad">
+      <div class="flex">
+        <span>名称</span><input id="gpName" placeholder="如：新手礼包" style="width:170px"/>
+        <span>周期(天)</span><input id="gpDays" type="number" min="0" step="1" value="0" style="width:70px"/>
+      </div>
+      <div class="flex" style="margin-top:8px">
+        <span>智能识别</span>
+        <input id="gpText" placeholder="粘贴礼包内容自动识别，如：红玉50、蓝玉200、饼干1万" style="flex:1;min-width:260px"/>
+      </div>
+      <div id="gpRows" style="margin:10px 0 0"></div>
+      <div class="flex" style="margin-top:10px">
+        <button id="gpAddRow">+ 资源</button>
+        <button class="primary" id="gpCommit">加入赠送礼包</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ④ 商城模块 -->
+  <section>
+    <h2>④ 商城模块 <span class="tag">购买礼包 + 限购周期</span></h2>
+    <div class="tblwrap"><table id="shopTbl">
+      <thead><tr><th>名称</th><th>资源内容</th><th class="num">售价(元)</th>
+        <th>限购/周期</th><th class="num">价值(元)</th><th class="num">性价比</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <div class="pad">
+      <div class="flex">
+        <span>名称</span><input id="shopName" placeholder="如：金砖8万" style="width:150px"/>
+        <span>售价(元)</span><input id="shopPrice" type="number" min="0" step="1" value="30" style="width:90px"/>
+        <span>限购</span><input id="shopLimit" type="number" min="1" step="1" value="1" style="width:70px"/>
+        <span>周期</span><select id="shopPeriod" style="width:90px">
+          <option value="day">每日</option>
+          <option value="week" selected>每周</option>
+          <option value="month">每月</option>
+          <option value="forever">永久</option>
+        </select>
+      </div>
+      <div class="flex" style="margin-top:8px">
+        <span>智能识别</span>
+        <input id="shopText" placeholder="粘贴内容自动识别，如：金砖8万 售价30 红玉50、蓝玉200、饼干1万" style="flex:1;min-width:260px"/>
+      </div>
+      <div id="shopRows" style="margin:10px 0 0"></div>
+      <div class="flex" style="margin-top:10px">
+        <button id="shopAddRow">+ 资源</button>
+        <button class="primary" id="shopCommit">加入商城</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ⑤ 满资源推演 -->
+  <section>
+    <h2>⑤ 满资源推演 <span class="tag">两种目标：最短时间 / 最少花费 · 含计算逻辑与逐项明细</span></h2>
+    <div class="flex" style="padding:12px 18px 0">
+      <span style="color:var(--sub);font-size:12px">模拟上限(天)</span>
+      <input id="maxDays" type="number" min="1" step="1" style="width:100px"/>
+      <span style="color:var(--sub);font-size:12px">规则：每日先结算免费/赠送，再按目标购买商城礼包；推演会预判最终实际触发的日累充与总累充赠送。</span>
+    </div>
+
+    <div class="note" id="logicNote" style="margin:12px 18px 0">
+      <b>达标的计算逻辑（逐日模拟）：</b>
+      ① 资源单价自动计算（平均成本法）：单价 = 含该资源的商城礼包售价之和 ÷ 该资源在全部模块中的获得量之和（免费来源会拉低单价；代金券固定为 1）。<br/>
+      ② 每日依次结算：进度模块（按周期免费发放）→ 赠送礼包（周期 0 为一次性）→ 按性价比（内容价值 ÷ 售价）从高到低购买商城礼包（受限购/周期约束）。<br/>
+      ③ 联动：预判最终实际触发的日累充（按天）与总累充档位，将赠品提前计入缺口；实际消费达标后再结算到账，避免重复购买。<br/>
+      ④ 达标判定：按资源分别计时；某资源累计获得 ≥ 需求总量时记为该资源的「练满天数」，全部资源达标即整体达标。<br/>
+      ⑤ 礼包按整包购买不可拆分，其他资源可能随礼包附带获得；表中「超出需求」列单独显示这部分结余。<br/>
+      ⑥ 两种口径：<b>方案 A 最短时间</b>=只要存在缺口就按性价比尽量买满；<b>方案 B 最少花费</b>=仅当缺口 &gt; 免费日均速率 × 剩余天数（等到上限也补不齐）时才购买。
+    </div>
+
+    <h3>方案 A · 最短时间优先 <span class="tag">尽量买，最快达标（时间最短，花费可能更高）</span></h3>
+    <div class="pad"><div class="kpis" id="simSummaryFast" style="margin:0"></div></div>
+    <div class="tblwrap"><table id="simTblFast">
+      <thead><tr><th>资源</th><th class="num">需求总量</th><th class="num">免费获得</th><th class="num">赠送</th>
+        <th class="num">商城购入</th><th class="num">已获得</th><th class="num">超出需求</th><th style="width:150px">进度</th><th class="num">练满天数</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <div id="simDetailFast"></div>
+
+    <h3>方案 B · 最少花费优先 <span class="tag">能等就等，只买免费来源覆盖不到的部分（花费最少，时间可能更长）</span></h3>
+    <div class="pad"><div class="kpis" id="simSummaryCheap" style="margin:0"></div></div>
+    <div class="tblwrap"><table id="simTblCheap">
+      <thead><tr><th>资源</th><th class="num">需求总量</th><th class="num">免费获得</th><th class="num">赠送</th>
+        <th class="num">商城购入</th><th class="num">已获得</th><th class="num">超出需求</th><th style="width:150px">进度</th><th class="num">练满天数</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <div id="simDetailCheap"></div>
+  </section>
+
+  <!-- ⑥ 本地存档 -->
+  <section>
+    <h2>⑥ 本地存档 <span class="tag">写入本地文件，持久保存、不怕清缓存</span></h2>
+    <div class="pad">
+      <div class="flex">
+        <button class="primary" id="fsPick">选择/新建存档文件</button>
+        <button id="fsSave">立即保存</button>
+        <button id="fsReload">从存档载入</button>
+        <button class="ghost" id="fsForget">解除关联</button>
+      </div>
+      <div class="flex" style="margin-top:8px">
+        <span style="color:var(--sub);font-size:12px">状态：</span>
+        <span id="fsStatus" style="color:var(--sub);font-size:12px">未关联存档文件</span>
+      </div>
+      <div class="note" style="margin:10px 0 0">普通浏览器的 localStorage 属于<b>缓存</b>，清理缓存/隐私数据就会丢失。关联一个<b>本地 JSON 文件</b>后，所有输入都会自动写入该文件（可随时用编辑器查看/修改）；下次打开页面一键「从存档载入」即可恢复。文件路径建议放在本项目目录下。</div>
+    </div>
+  </section>
+
+  <div class="flex" style="justify-content:center;margin-top:6px">
+    <button class="ghost" id="exportJson">导出配置JSON</button>
+    <button class="ghost" id="reset">重置为默认</button>
+  </div>
+  <div class="footer">输入内容同时写入本地存档文件与浏览器缓存；清缓存只影响缓存副本，存档文件不受影响。</div>
+</div>
+
+<script>
+/* ============ 数据（资源单价 + 成长需求总量） ============ */
+const DATA = /*__DATA__*/{"resources":[{"name":"四圣红玉","unit":0.8279964526397565},{"name":"白玉","unit":1.69866326925873e-05},{"name":"四圣蓝玉","unit":0.03166373572000284},{"name":"梦魇晶石","unit":5.6622108975291e-05},{"name":"成长脆饼","unit":0.0008702285850654656},{"name":"基因溶液","unit":0.0012495884381622689},{"name":"基因本源液","unit":0.8602832865846844},{"name":"复活丹","unit":0.028593393897171533},{"name":"军团币","unit":9.908671964328285e-05},{"name":"万能碎片","unit":0.012368979372517462},{"name":"珍珠","unit":0.32402836525350187},{"name":"彩玉","unit":0.03166427017971612},{"name":"贝壳","unit":0.35346590944951384},{"name":"幻彩灵果","unit":0.013247218080796739},{"name":"鎏金蛋碎片","unit":1.69866326925873e-05},{"name":"灵珠","unit":0.0009929265921845595},{"name":"扭蛋币","unit":0.7169900711054061},{"name":"皮肤币","unit":0.26212668106899123},{"name":"灵贝","unit":1.69866326925873e-05},{"name":"扳手","unit":0.053190134213850576},{"name":"招募令","unit":0.06288851041150088},{"name":"精铁","unit":0.00022131341030274374},{"name":"进阶石","unit":0.0002213134115599194},{"name":"金币袋子","unit":0.012577849624573383},{"name":"金鱼自选包","unit":0.025996403065731498},{"name":"宠物碎片","unit":0.0},{"name":"其它","unit":0.0},{"name":"代金券","unit":1}],"demandMax":{"四圣红玉":1500,"四圣蓝玉":125340,"成长脆饼":4100000,"基因溶液":11282000,"基因本源液":11250,"宠物碎片":1320}};
+
+const RES = DATA.resources.map(r=>r.name);
+const LSKEY = 'flh_pack_dash_v3';           // 逻辑重构：版本号升级，忽略旧配置
+
+/* ============ 状态 ============ */
+function defaultState(){
+  const unit={}, demand={};
+  DATA.resources.forEach(r=>{
+    unit[r.name]=0;                                              // 单价不再手工维护，由 computeUnits() 自动计算
+    demand[r.name]=(DATA.demandMax&&DATA.demandMax[r.name])||0;   // 需求总量默认取成长数据
+  });
+  return {
+    unit, demand,
+    pro:[],                 // 进度模块：{name, items:{res:qty}, days}
+    giftDaily:[],           // 日累充赠送：{th, items:{res:qty}}（可发多资源）
+    giftTotal:[],           // 总累充赠送：{th, items:{res:qty}}（可发多资源）
+    giftPack:[],            // 赠送礼包：{name, items:{res:qty}, days(0=一次性)}
+    shop:[],                // 商城模块：{name, items:{res:qty}, price, limit, days}
+    maxDays:1095,
+    proForm:{rows:[]}, gpForm:{rows:[]}, shopForm:{rows:[]}, gdForm:{rows:[]}, gtForm:{rows:[]}
+  };
+}
+/* 校正/补全读入的配置，避免缺字段导致报错 */
+function hydrate(s){
+  if(!s || !s.unit || !s.demand) return defaultState();
+  ['pro','giftDaily','giftTotal','giftPack','shop'].forEach(k=>{ if(!s[k]) s[k]=[]; });
+  // 兼容旧结构：日/总累充曾为 {th,res,qty}，统一迁移为 {th, items}
+  ['giftDaily','giftTotal'].forEach(k=>{
+    s[k]=s[k].map(g=> g.items ? g : {th:+g.th||0, items:(g.res? {[g.res]:+g.qty||0} : {})});
+  });
+  ['proForm','gpForm','shopForm','gdForm','gtForm'].forEach(k=>{ if(!s[k]) s[k]={rows:[]}; });
+  // 资源改名迁移：宠物饼干 → 成长脆饼（含需求总量与各模块资源明细）
+  const renItem = it=>{ if(it && ('宠物饼干' in it)){ it['成长脆饼']=(+it['成长脆饼']||0)+(+it['宠物饼干']||0); delete it['宠物饼干']; } return it; };
+  if(s.demand && ('宠物饼干' in s.demand)){ s.demand['成长脆饼']=(+s.demand['成长脆饼']||0)+(+s.demand['宠物饼干']||0); delete s.demand['宠物饼干']; }
+  ['pro','giftPack','giftDaily','giftTotal','shop'].forEach(k=> s[k].forEach(e=>renItem(e.items)));
+  ['proForm','gpForm','shopForm','gdForm','gtForm'].forEach(k=> s[k].rows.forEach(r=>{ if(r.res==='宠物饼干') r.res='成长脆饼'; }));
+  if(!s.maxDays)  s.maxDays  = 1095;
+  return s;
+}
+let state;
+try{ state = hydrate(JSON.parse(localStorage.getItem(LSKEY))); }
+catch(e){ state = defaultState(); }
+function persist(){
+  localStorage.setItem(LSKEY, JSON.stringify(state));   // 浏览器内快速恢复（清缓存会丢）
+  scheduleFileSave();                                    // 同步写入本地存档文件（持久）
+}
+
+/* ============ 基础工具 ============ */
+function u(name){ return +state.unit[name]||0; }
+function itemsVal(items){ let s=0; for(const k in items) s += (+items[k]||0)*u(k); return s; }
+function num(n){
+  n=+n||0;
+  if(Math.abs(n)>=1e8) return (n/1e8).toFixed(Math.abs(n)>=1e9?1:2)+'亿';
+  if(Math.abs(n)>=1e4) return (n/1e4).toFixed(Math.abs(n)>=1e5?0:1)+'万';
+  return (Math.round(n*100)/100).toLocaleString('zh-CN');
+}
+function yuan(n){ return '¥'+num(n); }
+function itemsText(items){
+  const ks=Object.keys(items||{}).filter(k=>(+items[k]||0)>0).sort((a,b)=>items[b]-items[a]);
+  return ks.length ? ks.map(k=>k+'×'+num(items[k])).join('、') : '—';
+}
+
+/* ============ 资源单价自动计算（平均成本法） ============ */
+/* 单价 = 含该资源的商城礼包售价之和 ÷ 该资源在全部模块中的获得量之和
+   - 商城礼包：只要含此资源，其售价即计入分子；其数量计入分母（付费来源）
+   - 进度 / 赠送礼包 / 日累充 / 总累充：仅计入分母（免费来源），从而拉低单价
+   - 无任何来源的资源：单价为 0 */
+function computeUnits(){
+  const pay={}, qty={};
+  RES.forEach(r=>{ pay[r]=0; qty[r]=0; });
+  const addQty = items=>{ for(const k in items){ if(k in qty) qty[k]+=(+items[k]||0); } };
+  // 商城模块：付费来源（售价计入分子，数量计入分母）
+  state.shop.forEach(p=>{
+    const its=p.items||{};
+    addQty(its);
+    RES.forEach(r=>{ if((+its[r]||0)>0) pay[r]+=(+p.price||0); });
+  });
+  // 免费来源：只计入分母
+  state.pro.forEach(e=>addQty(e.items));
+  state.giftPack.forEach(e=>addQty(e.items));
+  state.giftDaily.forEach(g=>addQty(g.items));
+  state.giftTotal.forEach(g=>addQty(g.items));
+  // 落盘单价（代金券与花费 1:1 相等，固定为 1）
+  RES.forEach(r=>{ state.unit[r] = (r==='代金券') ? 1 : (qty[r]>0 ? pay[r]/qty[r] : 0); });
+}
+
+/* ============ 文本智能识别（礼包内容自动解析） ============ */
+/* 支持形如：红玉50、蓝玉×200、饼干1万；名称支持常见别名归一化；数量支持 万/亿/w 换算 */
+const RES_ALIAS = {
+  '红玉':'四圣红玉', '蓝玉':'四圣蓝玉', '梦魇':'梦魇晶石',
+  '成长饼干':'成长脆饼', '饼干':'成长脆饼', '宠物饼干':'成长脆饼',
+  '幻灵彩果':'幻彩灵果', '基因溶剂':'基因溶液', '基因本源':'基因本源液',
+  '金鱼礼包自选':'金鱼自选包', '金鱼':'金鱼自选包',
+  '鎏金蛋':'鎏金蛋碎片', '蛋碎片':'鎏金蛋碎片'
+};
+const RES_TOKENS = (function(){
+  const map={};
+  RES.forEach(r=>{ map[r]=r; });                       // 标准名优先
+  Object.keys(RES_ALIAS).forEach(a=>{ if(!(a in map)) map[a]=RES_ALIAS[a]; });
+  return Object.keys(map).sort((a,b)=>b.length-a.length).map(t=>({t, name:map[t]}));
+})();
+const TOKEN2NAME={}; RES_TOKENS.forEach(x=>{ TOKEN2NAME[x.t]=x.name; });
+const RES_RX = new RegExp('(' + RES_TOKENS.map(x=>x.t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|')
+  + ')\\s*[×xX*:：·\\-]?\\s*([0-9]+(?:\\.[0-9]+)?)\\s*(万|亿|w|W)?', 'g');
+const UNIT_MUL = {'万':1e4, 'w':1e4, 'W':1e4, '亿':1e8};
+function parseItems(text){
+  const items={};
+  if(!text) return items;
+  const s=String(text).replace(/[，,]/g,'');
+  RES_RX.lastIndex=0;
+  let m;
+  while((m=RES_RX.exec(s))){
+    const name=TOKEN2NAME[m[1]];
+    let q=parseFloat(m[2]);
+    if(m[3]) q*=(UNIT_MUL[m[3]]||1);
+    if(name && isFinite(q) && q>0) items[name]=(items[name]||0)+q;
+  }
+  return items;
+}
+function itemsToRows(items){ return Object.keys(items).map(k=>({res:k, qty:items[k]})); }
+
+/* 识别文本中的「金额 / 门槛」数字，用于回填 售价 / 门槛 字段
+   支持：¥300、300元、售价30、价格30、门槛300、满300、累计充值1000、充值1000 等写法
+   注意：只认「带金额标识」的数字，不会把「红玉50」这类资源数量误判为金额 */
+function parseMoney(text){
+  if(!text) return null;
+  const s=String(text);
+  let m;
+  if((m = s.match(/(?:¥|￥)\s*([0-9]+(?:\.[0-9]+)?)/)))            return parseFloat(m[1]); // ¥300
+  if((m = s.match(/([0-9]+(?:\.[0-9]+)?)\s*元/)))                  return parseFloat(m[1]); // 300元
+  if((m = s.match(/(?:门槛|满|累充|充值|售价|价格|单价|￥|¥)\D{0,4}?([0-9]+(?:\.[0-9]+)?)/)))
+    return parseFloat(m[1]);                                                                // 满300 / 充值1000
+  return null;
+}
+
+/* 识别礼包名称：优先「名称：xxx」，其次含「礼包/宝箱/周卡…」的词，再退化到资源/金额前的文字 */
+function parseName(text){
+  if(!text) return null;
+  const s=String(text).trim();
+  let m;
+  if((m = s.match(/名称\s*[:：]\s*([^\s,，、;；]+)/))) return m[1];
+  if((m = s.match(/([\u4e00-\u9fa5A-Za-z0-9]{1,20}(?:自选包|大礼包|礼包|宝箱|礼盒|特权卡|周卡|月卡))/))) return m[1];
+  let idx=s.length;
+  RES_TOKENS.forEach(t=>{ const i=s.indexOf(t.t); if(i>=0 && i<idx) idx=i; });
+  const mi=s.search(/售价|价格|单价|门槛|满|充值|[¥￥]/); if(mi>=0 && mi<idx) idx=mi;
+  const name=s.slice(0,idx).replace(/[\s:：,，、\-。]+$/,'').trim();
+  return name || null;
+}
+
+/* 商城限购周期：每日 / 每周 / 每月 / 永久（永久 = 不重置，只算总限购次数） */
+const PERIODS = { day:{label:'每日',days:1}, week:{label:'每周',days:7}, month:{label:'每月',days:30}, forever:{label:'永久',days:0} };
+/* 旧数据的 days → 周期：仅精确匹配 1/7/30，其余(如 999=不重置)一律视为「永久」 */
+function derivePeriod(d){ if(d===1) return 'day'; if(d===7) return 'week'; if(d===30) return 'month'; return 'forever'; }
+function periodOf(entry){ const p=entry&&entry.period; return (p&&PERIODS[p])?p:derivePeriod(+((entry&&entry.days)||0)); }
+function periodDays(entry){ return PERIODS[periodOf(entry)].days; }
+function periodLabel(entry){ return PERIODS[periodOf(entry)].label; }
+
+/* ============ 推演核心：单账号满资源模拟 ============ */
+/* 两种目标：
+   mode='time' → 最短时间优先：只要有缺口就尽可能买（最快练满，花费可能更高）
+   mode='cost' → 最少花费优先：只有当某资源的缺口「等到上限也补不齐」时才花钱（花费最少，时间可能更长）
+   公共逻辑：
+   1) 每日先结算「进度模块(免费)」与「赠送礼包」；
+   2) 再按性价比(价值/售价)从高到低购买「商城模块」礼包，受限购/周期约束；
+   3) 商城消费累计 → 触发「总累充赠送」；当日消费达标 → 触发「日累充赠送」；
+   4) 逐资源记录首次达到需求总量的天数（按资源分别计时）。 */
+/* 单次推演（内部）。
+   preFire = 「预判最终会触发的总累充档位」下标集合；这些档位的赠品在真正触发前
+   先计入 antic（预计到账），购买判定时从缺口里扣除，避免为「之后才赠送」的资源提前买单。 */
+function simulateOnce(mode, preFire, preDaily){
+  mode = mode || 'time';
+  const need = RES.filter(r=>(+state.demand[r]||0)>0);
+  const r = {mode, need, days:0, money:0, shopBuys:0,
+             got:{}, freeGot:{}, giftGot:{}, shopGot:{}, firstDay:{}, unfinished:[]};
+  RES.forEach(x=>{ r.got[x]=0; r.freeGot[x]=0; r.giftGot[x]=0; r.shopGot[x]=0; r.firstDay[x]=0; });
+  r.unfinished = need.slice();
+  if(!need.length) return r;
+
+  const D={}; RES.forEach(x=>D[x]=+state.demand[x]||0);
+  const got=r.got, freeGot=r.freeGot, giftGot=r.giftGot, shopGot=r.shopGot, firstDay=r.firstDay;
+  const add = (tgt, items)=>{ for(const k in items){ const v=+items[k]||0; if(!v) continue;
+    got[k]=(got[k]||0)+v; tgt[k]=(tgt[k]||0)+v; } };
+
+  // 免费来源的日均速率（「最少花费」据此判断缺口能否靠等待补齐）
+  const rate={}; RES.forEach(x=>rate[x]=0);
+  const addRate = (items, per)=>{ for(const k in items){ if(k in rate) rate[k]+=(+items[k]||0)/per; } };
+  state.pro.forEach(e=>{ const per=+e.days||0; if(per>=1) addRate(e.items, per); });
+  state.giftPack.forEach(e=>{ const per=+e.days||0; if(per>=1) addRate(e.items, per); });
+
+  const bought={}; state.shop.forEach((p,i)=>bought[i]=0);
+  const totalFired={}; state.giftTotal.forEach((g,i)=>totalFired[i]=false);
+  // 「预判会触发的总累充档位」的赠品：在真正触发前先记为 antic（预计到账），购买判定时视作已有
+  const preSet={}; (preFire||[]).forEach(i=>preSet[i]=true);
+  // 日累充按「天+档位」预判，避免把后续每天实际会触发的奖励留到买完之后才计入
+  const preDailySet={};
+  Object.keys(preDaily||{}).forEach(day=>(preDaily[day]||[]).forEach(i=>preDailySet[day+':'+i]=true));
+  const antic={}; RES.forEach(x=>antic[x]=0);
+  state.giftTotal.forEach((g,i)=>{ if(preSet[i]){ const gi=g.items||{}; for(const k in gi) antic[k]=(antic[k]||0)+(+gi[k]||0); } });
+  Object.keys(preDaily||{}).forEach(day=>(preDaily[day]||[]).forEach(i=>{
+    const gi=state.giftDaily[i].items||{};
+    for(const k in gi) antic[k]=(antic[k]||0)+(+gi[k]||0);
+  }));
+  // 明细统计：各商城礼包购买情况 / 日累充 / 总累充 触发情况
+  const buyStats = state.shop.map(p=>({name:p.name||'礼包', price:+p.price||0, times:0, firstDay:0, money:0}));
+  const dailyFire = state.giftDaily.map(g=>({th:+g.th||0, items:g.items||{}, count:0, firstDay:0, days:[]}));
+  const totalFire = state.giftTotal.map(g=>({th:+g.th||0, items:g.items||{}, day:0}));
+  let money=0;
+  const MAX=Math.max(1, +state.maxDays||1095);
+
+  for(let d=1; d<=MAX; d++){
+    // (1) 进度模块：免费获得
+    state.pro.forEach(e=>{ const per=+e.days||0; if(per>=1 && d%per===0) add(freeGot, e.items); });
+    // (1b) 赠送礼包：周期=0 仅首次
+    state.giftPack.forEach(e=>{ const per=+e.days||0;
+      if(per===0){ if(d===1) add(giftGot, e.items); } else if(d%per===0) add(giftGot, e.items); });
+
+    // (2) 商城购买：按性价比自动补满（受限购/周期约束）
+    const remainDays = MAX - d;                                   // 今天之后剩余天数
+    let daySpend=0, guard=0;
+    const firedToday={};                                          // 本日已触发的日累充档位
+    // 每买一次立即结算累充赠送：赠送到的资源即时回补缺口，避免「先买满、后赠送」造成超买
+    const settleGift=()=>{
+      // (3a) 总累充赠送：累计消费达标一次性发放（发放后从 antic「预计到账」中冲减）
+      state.giftTotal.forEach((g,i)=>{
+        if(!totalFired[i] && money >= (+g.th||0)){ totalFired[i]=true; totalFire[i].day=d; const gi=g.items||{}; add(giftGot, gi); if(preSet[i]) for(const k in gi) antic[k]=(antic[k]||0)-(+gi[k]||0); }
+      });
+      // (3b) 日累充赠送：当日消费达标（每档每日一次）
+      state.giftDaily.forEach((g,i)=>{
+        if(!firedToday[i] && daySpend >= (+g.th||0)){
+          firedToday[i]=true; add(giftGot, g.items||{}); dailyFire[i].count++; dailyFire[i].days.push(d);
+          if(!dailyFire[i].firstDay) dailyFire[i].firstDay=d;
+          if(preDailySet[d+':'+i]) for(const k in (g.items||{})) antic[k]=(antic[k]||0)-(+g.items[k]||0);
+        }
+      });
+    };
+    while(guard++ < 200000){
+      let best=-1, bestRatio=-1;
+      for(let i=0;i<state.shop.length;i++){
+        const p=state.shop[i];
+        const per=periodDays(p);                                   // 0 = 永久（不重置）
+        const allowed = per>0 ? (+p.limit||1)*Math.ceil(d/per)     // 截至第 d 天可购买累计次数
+                              : (+p.limit||1);
+        if(bought[i] >= allowed) continue;
+        // 只按「当前仍缺口的资源」计价，且单次价值不超过缺口量（避免为不需要的资源买单、避免超买）
+        // 缺口 = 需求 - 已获得 - 预计到账(antic)：antic 是之后必然发放的总累充赠品，先扣掉避免重复买
+        let useful=0;
+        for(const k in p.items){
+          const gap = D[k]-(got[k]||0)-(antic[k]||0);
+          if(gap <= 0) continue;
+          // 最少花费模式：仅当该缺口「等到上限仍补不齐」时才值得购买
+          if(mode==='cost' && gap <= (rate[k]||0)*remainDays) continue;
+          useful += Math.min(+p.items[k]||0, gap) * u(k);
+        }
+        if(useful<=0) continue;                                     // 对缺口没有任何有效贡献的礼包不买
+        const ratio = (+p.price>0) ? useful/(+p.price) : 1e9;       // 有用价值 / 售价
+        if(ratio > bestRatio){ bestRatio=ratio; best=i; }
+      }
+      if(best<0) break;
+      const p=state.shop[best];
+      bought[best]++; money+=(+p.price||0); daySpend+=(+p.price||0); r.shopBuys++;
+      buyStats[best].times++; buyStats[best].money+=(+p.price||0);
+      if(!buyStats[best].firstDay) buyStats[best].firstDay=d;
+      add(shopGot, p.items);
+      settleGift();                                                // 立即结算累充赠送，回补缺口
+    }
+
+    // 预判的日累充档位若本日未实际触发，撤销这笔预计奖励，避免把未到账资源算入达标
+    (preDaily[d]||[]).forEach(i=>{
+      if(!firedToday[i]) for(const k in (state.giftDaily[i].items||{})) antic[k]=(antic[k]||0)-(+state.giftDaily[i].items[k]||0);
+    });
+
+    // (4) 记录逐资源练满天数（按「实际到账」计时；antic 仅用于避免重复购买，不计入到账）
+    need.forEach(x=>{ if(!firstDay[x] && got[x] >= D[x]) firstDay[x]=d; });
+    r.days=d; r.money=money;
+    r.unfinished = need.filter(x=>got[x] < D[x] && (got[x]+(antic[x]||0)) < D[x]);
+    if(!r.unfinished.length) break;
+  }
+  r.buyStats = buyStats;         // 各商城礼包购买明细
+  r.dailyFire = dailyFire;       // 日累充触发明细
+  r.totalFire = totalFire;       // 总累充触发明细
+  return r;
+}
+
+/* 外层：找出「合法且尽量大」的日累充事件与总累充档位预判集合，再定稿。
+   先用无预判推演建立候选日累充事件，再与总累充候选一起模拟；若预计奖励最终没有真实触发，就剔除该预判并重跑。
+   这样能提前计入最终会到账的赠品，避免逐日按未扣赠送的缺口买礼包；同时不把未触发的奖励误算成已获得。
+   门槛与消费额互相影响时，候选集合只做收缩，确保最终每项预判都能在结果中找到对应的真实触发。 */
+function simulate(mode){
+  mode = mode || 'time';
+  // 先用不预判的结果，确定当前购买路径下真实触发的日累充「天+档位」事件
+  const baseline = simulateOnce(mode, [], {});
+  let preTotal = state.giftTotal.map((g,i)=>i);     // 初始：预判全部总累充档位
+  let preDaily = {};
+  baseline.dailyFire.forEach((f,i)=>f.days.forEach(day=>{
+    (preDaily[day]||(preDaily[day]=[])).push(i);
+  }));
+  const eventCount = Object.values(preDaily).reduce((n,a)=>n+a.length,0);
+  for(let it=0; it<=state.giftTotal.length+eventCount+2; it++){
+    const r = simulateOnce(mode, preTotal, preDaily);
+    const M = +r.money||0;
+    // 只保留最终真实触发的总累充档位与日累充事件，避免预判未到账的赠品
+    const keepTotal = preTotal.filter(i => (+state.giftTotal[i].th||0) <= M);
+    const actualDaily = {};
+    r.dailyFire.forEach((f,i)=>f.days.forEach(day=>actualDaily[day+':'+i]=true));
+    const keepDaily = {};
+    Object.keys(preDaily).forEach(day=>{
+      const kept=(preDaily[day]||[]).filter(i=>actualDaily[day+':'+i]);
+      if(kept.length) keepDaily[day]=kept;
+    });
+    const totalStable = keepTotal.length === preTotal.length;
+    const dailyCount = Object.values(preDaily).reduce((n,a)=>n+a.length,0);
+    const keptDailyCount = Object.values(keepDaily).reduce((n,a)=>n+a.length,0);
+    if(totalStable && keptDailyCount === dailyCount){
+      r.anticipated = preTotal.slice();
+      r.anticipatedDaily = keepDaily;
+      return r;                                        // 所有预判赠品都真实触发 → 合法定稿
+    }
+    preTotal = keepTotal;
+    preDaily = keepDaily;                              // 剔除未触发档位后重新推演
+  }
+  return simulateOnce(mode, [], {});                  // 兜底：不预判，保证不会把未到账赠品计入需求
+}
+
+/* ============ 渲染：KPI（两种达标口径） ============ */
+function renderKPI(simFast, simCheap){
+  const need=(simFast&&simFast.need)||[];
+  const doneA=need.filter(x=>simFast.firstDay[x]).length;
+  const doneB=need.filter(x=>simCheap.firstDay[x]).length;
+  const k=[
+    ['① 达标最短时间', simFast.days? simFast.days+' 天':'—', '方案A · 对应花费 '+yuan(simFast.money||0)],
+    ['① 最短时间的花费', yuan(simFast.money||0), '方案A · 尽量买，最快练满'],
+    ['② 达标最少花费', yuan(simCheap.money||0), '方案B · 对应时间 '+(simCheap.days? simCheap.days+' 天':'—')],
+    ['② 最少花费的时间', simCheap.days? simCheap.days+' 天':'—', '方案B · 只买补不齐的部分'],
+    ['达标资源 A / B', doneA+' ／ '+doneB+' 种', '共 '+need.length+' 种需求资源']
+  ];
+  document.getElementById('kpis').innerHTML = k.map(x=>
+    `<div class="kpi"><div class="l">${x[0]}</div><div class="v">${x[1]}</div><div class="s">${x[2]}</div></div>`
+  ).join('');
+}
+
+/* ============ 渲染：① 资源目标 ============ */
+function renderTarget(){
+  const maxv=Math.max(1e-9, ...RES.map(r=>(+state.demand[r]||0)*u(r)));
+  const tb=document.querySelector('#targetTbl tbody');
+  tb.innerHTML = RES.map(r=>{
+    const d=+state.demand[r]||0, val=d*u(r), un=u(r);
+    return `<tr>
+      <td>${r}</td>
+      <td class="num">${un? un.toFixed(6):'<span class="itm">0（无来源）</span>'}</td>
+      <td class="num"><input type="number" step="1" min="0" value="${d}" data-res="${r}" class="tdem" style="width:120px;text-align:right"></td>
+      <td class="num">${yuan(val)}</td>
+      <td><div class="bar"><i style="width:${(val/maxv*100).toFixed(1)}%"></i></div></td>
+    </tr>`;
+  }).join('');
+  tb.querySelectorAll('.tdem').forEach(el=>el.onchange=e=>{ state.demand[e.target.dataset.res]=+e.target.value||0; persist(); renderAll(); });
+}
+
+/* ============ 表单资源行（复用组件） ============ */
+function rowEditorHTML(rows){
+  return (rows||[]).map((r,i)=>`<div class="designer-row">
+    <select class="fs-res" data-i="${i}">${RES.map(x=>`<option ${x===r.res?'selected':''}>${x}</option>`).join('')}</select>
+    <input type="number" class="fs-qty" data-i="${i}" value="${r.qty}" step="1" min="0" style="text-align:right"/>
+    <button class="ghost fs-del" data-i="${i}">✕</button></div>`).join('')
+    || '<div class="hint" style="padding-left:0">点「+ 资源」添加</div>';
+}
+function bindRows(box, form){
+  box.querySelectorAll('.fs-res').forEach(el=>el.onchange=e=>{ form.rows[+e.target.dataset.i].res=e.target.value; persist(); renderAll(); });
+  box.querySelectorAll('.fs-qty').forEach(el=>el.oninput=e=>{ form.rows[+e.target.dataset.i].qty=+e.target.value||0; persist(); });
+  box.querySelectorAll('.fs-del').forEach(el=>el.onclick=e=>{ form.rows.splice(+e.target.dataset.i,1); persist(); renderAll(); });
+}
+
+/* ============ 渲染：② 进度模块 ============ */
+function renderPro(){
+  const tb=document.querySelector('#proTbl tbody');
+  tb.innerHTML = state.pro.map((e,i)=>`<tr>
+    <td>${e.name||'—'}</td><td class="itm">${itemsText(e.items)}</td>
+    <td class="num">${e.days} 天</td>
+    <td><button class="ghost" data-del="${i}">✕</button></td></tr>`).join('')
+    || '<tr><td colspan="4" class="itm" style="padding:10px">暂无</td></tr>';
+  tb.querySelectorAll('[data-del]').forEach(el=>el.onclick=e=>{ state.pro.splice(+e.target.dataset.del,1); persist(); renderAll(); });
+  const box=document.getElementById('proRows');
+  box.innerHTML=rowEditorHTML(state.proForm.rows);
+  bindRows(box, state.proForm);
+}
+
+/* ============ 渲染：③ 赠送模块 ============ */
+function renderGift(){
+  // 日累充
+  const t1=document.querySelector('#gdTbl tbody');
+  t1.innerHTML = state.giftDaily.map((g,i)=>`<tr>
+    <td class="num">${yuan(g.th)}</td><td class="itm">${itemsText(g.items)}</td>
+    <td><button class="ghost" data-del="${i}">✕</button></td></tr>`).join('')
+    || '<tr><td colspan="3" class="itm" style="padding:10px">暂无</td></tr>';
+  t1.querySelectorAll('[data-del]').forEach(el=>el.onclick=e=>{ state.giftDaily.splice(+e.target.dataset.del,1); persist(); renderAll(); });
+  // 总累充
+  const t2=document.querySelector('#gtTbl tbody');
+  t2.innerHTML = state.giftTotal.map((g,i)=>`<tr>
+    <td class="num">${yuan(g.th)}</td><td class="itm">${itemsText(g.items)}</td>
+    <td><button class="ghost" data-del="${i}">✕</button></td></tr>`).join('')
+    || '<tr><td colspan="3" class="itm" style="padding:10px">暂无</td></tr>';
+  t2.querySelectorAll('[data-del]').forEach(el=>el.onclick=e=>{ state.giftTotal.splice(+e.target.dataset.del,1); persist(); renderAll(); });
+  // 日/总累充：多资源行编辑器
+  const boxGd=document.getElementById('gdRows');
+  boxGd.innerHTML=rowEditorHTML(state.gdForm.rows); bindRows(boxGd, state.gdForm);
+  const boxGt=document.getElementById('gtRows');
+  boxGt.innerHTML=rowEditorHTML(state.gtForm.rows); bindRows(boxGt, state.gtForm);
+  // 赠送礼包
+  const t3=document.querySelector('#gpTbl tbody');
+  t3.innerHTML = state.giftPack.map((e,i)=>`<tr>
+    <td>${e.name||'—'}</td><td class="itm">${itemsText(e.items)}</td>
+    <td class="num">${(+e.days||0)===0?'一次性':e.days+' 天'}</td>
+    <td class="num">${yuan(itemsVal(e.items))}</td>
+    <td><button class="ghost" data-del="${i}">✕</button></td></tr>`).join('')
+    || '<tr><td colspan="5" class="itm" style="padding:10px">暂无</td></tr>';
+  t3.querySelectorAll('[data-del]').forEach(el=>el.onclick=e=>{ state.giftPack.splice(+e.target.dataset.del,1); persist(); renderAll(); });
+  const box=document.getElementById('gpRows');
+  box.innerHTML=rowEditorHTML(state.gpForm.rows);
+  bindRows(box, state.gpForm);
+}
+
+/* ============ 渲染：④ 商城模块 ============ */
+function renderShop(){
+  const tb=document.querySelector('#shopTbl tbody');
+  tb.innerHTML = state.shop.map((p,i)=>{
+    const val=itemsVal(p.items), ratio=(+p.price>0)? val/(+p.price):0;
+    const cls = ratio>=1.4?'d-good':(ratio>=0.9?'d-mid':'d-bad');
+    return `<tr>
+      <td>${p.name||'—'}</td><td class="itm">${itemsText(p.items)}</td>
+      <td class="num">${yuan(p.price)}</td>
+      <td>${p.limit||1} 次 / ${periodLabel(p)}</td>
+      <td class="num">${val.toFixed(2)}</td>
+      <td class="num ${cls}">${ratio.toFixed(2)}</td>
+      <td><button class="ghost" data-del="${i}">✕</button></td></tr>`;
+  }).join('') || '<tr><td colspan="7" class="itm" style="padding:10px">暂无</td></tr>';
+  tb.querySelectorAll('[data-del]').forEach(el=>el.onclick=e=>{ state.shop.splice(+e.target.dataset.del,1); persist(); renderAll(); });
+  const box=document.getElementById('shopRows');
+  box.innerHTML=rowEditorHTML(state.shopForm.rows);
+  bindRows(box, state.shopForm);
+}
+
+/* ============ 渲染：⑤ 满资源推演（按方案分别渲染） ============ */
+function renderSim(sim, tblId, sumId, detailId){
+  const need=sim.need||[];
+  const tb=document.querySelector('#'+tblId+' tbody');
+  // 资源明细：展示各来源、实际获得量与超出需求量
+  tb.innerHTML = need.map(x=>{
+    const d=+state.demand[x]||0, free=sim.freeGot[x]||0, gift=sim.giftGot[x]||0, shop=sim.shopGot[x]||0;
+    const got=free+gift+shop;
+    const excess=Math.max(0,got-d);
+    const pct=Math.min(100, d? got/d*100 : 0);
+    const day=sim.firstDay[x]||0;
+    return `<tr>
+      <td>${x}</td>
+      <td class="num">${num(d)}</td>
+      <td class="num">${num(free)}</td>
+      <td class="num">${num(gift)}</td>
+      <td class="num">${num(shop)}</td>
+      <td class="num">${num(got)}</td>
+      <td class="num ${excess?'d-bad':''}">${num(excess)}</td>
+      <td><div class="bar"><i style="width:${pct.toFixed(1)}%"></i></div></td>
+      <td class="num">${day? day+' 天':'<span class="d-bad">未达标</span>'}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="9" class="itm" style="padding:10px">请先在 ① 填写需求总量</td></tr>';
+
+  const freeVal=need.reduce((s,x)=>s+(sim.freeGot[x]||0)*u(x),0);
+  const giftVal=need.reduce((s,x)=>s+(sim.giftGot[x]||0)*u(x),0);
+  const shopVal=need.reduce((s,x)=>s+(sim.shopGot[x]||0)*u(x),0);
+  document.getElementById(sumId).innerHTML = [
+    ['总时长', sim.days? sim.days+' 天':'—', '上限 '+state.maxDays+' 天'],
+    ['总花费', yuan(sim.money||0), '商城购买合计'],
+    ['商城购买次数', num(sim.shopBuys||0), '按性价比自动购买'],
+    ['免费贡献', yuan(freeVal), '进度模块'],
+    ['赠送贡献', yuan(giftVal), '日累充+总累充+赠送礼包'],
+    ['商城贡献', yuan(shopVal), '购买获得资源价值']
+  ].map(x=>`<div class="kpi"><div class="l">${x[0]}</div><div class="v">${x[1]}</div><div class="s">${x[2]}</div></div>`).join('');
+
+  // ⑤-明细：商城购买明细 + 累充触发明细（展示计算过程）
+  const box=document.getElementById(detailId);
+  if(!box) return;
+  const buys=(sim.buyStats||[]).filter(b=>b.times>0);
+  const buyRows = buys.map(b=>`<tr>
+      <td>${b.name}</td>
+      <td class="num">${yuan(b.price)}</td>
+      <td class="num">${num(b.times)} 次</td>
+      <td class="num">${b.firstDay? b.firstDay+' 天':'—'}</td>
+      <td class="num">${yuan(b.money)}</td>
+    </tr>`).join('') || '<tr><td colspan="5" class="itm" style="padding:10px">未发生商城购买</td></tr>';
+
+  const dFire=(sim.dailyFire||[]).filter(g=>g.count>0);
+  const dRows = dFire.map(g=>`<tr>
+      <td class="num">${yuan(g.th)}</td>
+      <td class="itm">${itemsText(g.items)}</td>
+      <td class="num">${num(g.count)} 次</td>
+      <td class="num">${g.firstDay? '首触 '+g.firstDay+' 天':'—'}</td>
+    </tr>`).join('') || '<tr><td colspan="4" class="itm" style="padding:10px">未触发日累充</td></tr>';
+
+  const tFire=(sim.totalFire||[]).filter(g=>g.day>0);
+  const tRows = tFire.map(g=>`<tr>
+      <td class="num">${yuan(g.th)}</td>
+      <td class="itm">${itemsText(g.items)}</td>
+      <td class="num">第 ${g.day} 天</td>
+    </tr>`).join('') || '<tr><td colspan="3" class="itm" style="padding:10px">未触发总累充</td></tr>';
+
+  box.innerHTML = `
+    <div class="pad" style="padding-top:0">
+      <h3 style="border-top:none;background:none;padding:12px 0 6px">购买明细 <span class="tag">按性价比自动购买的礼包</span></h3>
+      <div class="tblwrap"><table>
+        <thead><tr><th>礼包</th><th class="num">售价</th><th class="num">购买次数</th><th class="num">首次购买</th><th class="num">累计花费</th></tr></thead>
+        <tbody>${buyRows}</tbody>
+      </table></div>
+
+      <h3 style="border-top:none;background:none;padding:14px 0 6px">日累充触发明细 <span class="tag">当日消费达标即发放</span></h3>
+      <div class="tblwrap"><table>
+        <thead><tr><th class="num">每日门槛</th><th>发放内容</th><th class="num">触发次数</th><th class="num">首次触发</th></tr></thead>
+        <tbody>${dRows}</tbody>
+      </table></div>
+
+      <h3 style="border-top:none;background:none;padding:14px 0 6px">总累充触发明细 <span class="tag">累计消费达标一次性发放</span></h3>
+      <div class="tblwrap"><table>
+        <thead><tr><th class="num">累计门槛</th><th>发放内容</th><th class="num">触发时间</th></tr></thead>
+        <tbody>${tRows}</tbody>
+      </table></div>
+      <div class="hint" style="padding:10px 0 0">对账口径：需求总量 = 免费获得 + 赠送 + 商城购入；某资源的「练满天数」= 其累计获得首次 ≥ 需求总量的天数。</div>
+    </div>`;
+}
+
+/* ============ 总渲染 ============ */
+function renderAll(){
+  computeUnits();                                  // 先按三模块内容自动计算资源单价
+  const simFast  = simulate('time');               // ① 最短时间
+  const simCheap = simulate('cost');               // ② 最少花费
+  renderKPI(simFast, simCheap);
+  renderTarget(); renderPro(); renderGift(); renderShop();
+  renderSim(simFast,  'simTblFast',  'simSummaryFast',  'simDetailFast');
+  renderSim(simCheap, 'simTblCheap', 'simSummaryCheap', 'simDetailCheap');
+}
+
+/* ============ 表单提交 ============ */
+document.getElementById('proAddRow').onclick = ()=>{ state.proForm.rows.push({res:RES[0], qty:1000}); persist(); renderPro(); };
+document.getElementById('gpAddRow').onclick  = ()=>{ state.gpForm.rows.push({res:RES[0], qty:1000}); persist(); renderGift(); };
+document.getElementById('shopAddRow').onclick= ()=>{ state.shopForm.rows.push({res:RES[0], qty:1000}); persist(); renderShop(); };
+document.getElementById('gdAddRow').onclick  = ()=>{ state.gdForm.rows.push({res:RES[0], qty:1000}); persist(); renderGift(); };
+document.getElementById('gtAddRow').onclick  = ()=>{ state.gtForm.rows.push({res:RES[0], qty:1000}); persist(); renderGift(); };
+
+/* 智能识别：输入即解析，实时回填到资源行；可选同时识别 金额/门槛、礼包名称 */
+function bindTextParse(id, form, rerender, opts){
+  opts = opts || {};
+  const el=document.getElementById(id);
+  if(!el) return;
+  el.oninput=()=>{
+    form.rows=itemsToRows(parseItems(el.value));
+    if(opts.moneyId){
+      const mv=parseMoney(el.value);
+      if(mv!=null){ const t=document.getElementById(opts.moneyId); if(t) t.value=mv; }
+    }
+    if(opts.nameId){
+      const nm=parseName(el.value);
+      if(nm){ const t=document.getElementById(opts.nameId); if(t) t.value=nm; }
+    }
+    persist(); rerender();
+  };
+}
+bindTextParse('proText',  state.proForm,  ()=>{ renderPro();  });
+bindTextParse('gpText',   state.gpForm,   ()=>{ renderGift(); });
+bindTextParse('shopText', state.shopForm, ()=>{ renderShop(); }, { moneyId:'shopPrice', nameId:'shopName' }); // 识别 售价+名称
+bindTextParse('gdText',   state.gdForm,   ()=>{ renderGift(); }, { moneyId:'gdTh' });   // 识别 门槛
+bindTextParse('gtText',   state.gtForm,   ()=>{ renderGift(); }, { moneyId:'gtTh' });   // 识别 累计门槛
+
+function rowsToItems(rows){
+  const its={}; (rows||[]).forEach(r=>{ if(+r.qty>0) its[r.res]=(its[r.res]||0)+(+r.qty); });
+  return its;
+}
+document.getElementById('proCommit').onclick = ()=>{
+  const its=rowsToItems(state.proForm.rows);
+  if(!Object.keys(its).length){ alert('请先添加资源'); return; }
+  state.pro.push({name:document.getElementById('proName').value||'进度', items:its, days:+document.getElementById('proDays').value||1});
+  state.proForm.rows=[]; document.getElementById('proName').value=''; persist(); renderAll();
+};
+document.getElementById('gpCommit').onclick = ()=>{
+  const its=rowsToItems(state.gpForm.rows);
+  if(!Object.keys(its).length){ alert('请先添加资源'); return; }
+  state.giftPack.push({name:document.getElementById('gpName').value||'赠送礼包', items:its, days:+document.getElementById('gpDays').value||0});
+  state.gpForm.rows=[]; document.getElementById('gpName').value=''; persist(); renderAll();
+};
+document.getElementById('shopCommit').onclick = ()=>{
+  const its=rowsToItems(state.shopForm.rows);
+  if(!Object.keys(its).length){ alert('请先添加资源'); return; }
+  state.shop.push({name:document.getElementById('shopName').value||'礼包', items:its,
+    price:+document.getElementById('shopPrice').value||0,
+    limit:+document.getElementById('shopLimit').value||1,
+    period:document.getElementById('shopPeriod').value});
+  state.shopForm.rows=[]; document.getElementById('shopName').value=''; persist(); renderAll();
+};
+document.getElementById('gdCommit').onclick = ()=>{
+  const its=rowsToItems(state.gdForm.rows);
+  if(!Object.keys(its).length){ alert('请先添加资源'); return; }
+  state.giftDaily.push({th:+document.getElementById('gdTh').value||0, items:its});
+  state.gdForm.rows=[]; persist(); renderAll();
+};
+document.getElementById('gtCommit').onclick = ()=>{
+  const its=rowsToItems(state.gtForm.rows);
+  if(!Object.keys(its).length){ alert('请先添加资源'); return; }
+  state.giftTotal.push({th:+document.getElementById('gtTh').value||0, items:its});
+  state.gtForm.rows=[]; persist(); renderAll();
+};
+
+/* ============ 顶部输入 & 其它 ============ */
+document.getElementById('maxDays').value = state.maxDays;
+document.getElementById('maxDays').onchange = e=>{ state.maxDays=Math.max(1,+e.target.value||1); persist(); renderAll(); };
+document.getElementById('exportJson').onclick = ()=> dl(JSON.stringify(state,null,1),'满资源推演配置.json','application/json');
+document.getElementById('reset').onclick = ()=>{
+  if(confirm('确定重置为默认？所有模块内容与本地修改将丢失。')){ state=defaultState(); persist(); document.getElementById('maxDays').value=state.maxDays; renderAll(); }
+};
+function dl(text, name, type){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([text],{type:type+';charset=utf-8'}));
+  a.download=name; a.click(); URL.revokeObjectURL(a.href);
+}
+
+/* ============ ⑥ 本地存档（File System Access API） ============ */
+/* 目的：把输入数据写入用户自己选的本地 JSON 文件，避免只存 localStorage（清缓存即丢）。
+   - 文件句柄无法写进 localStorage，改用 IndexedDB 持久化，下次打开自动恢复关联
+   - 每次 persist() 都会触发「防抖自动保存」，无需手动点
+   - 浏览器不支持该 API 时优雅降级为「导出配置JSON」 */
+let fileHandle = null, saveTimer = null;
+const FS_IDB = 'flh_fs_handle', FS_KEY = 'fileHandle';
+
+function idbOpen(){
+  return new Promise((res,rej)=>{
+    const rq = indexedDB.open(FS_IDB, 1);
+    rq.onupgradeneeded = ()=>{ if(!rq.result.objectStoreNames.contains('kv')) rq.result.createObjectStore('kv'); };
+    rq.onsuccess = ()=>res(rq.result);
+    rq.onerror  = ()=>rej(rq.error);
+  });
+}
+async function idbSet(k,v){ try{ const db=await idbOpen(); await new Promise((res,rej)=>{ const tx=db.transaction('kv','readwrite'); tx.objectStore('kv').put(v,k); tx.oncomplete=res; tx.onerror=()=>rej(tx.error); }); }catch(e){} }
+async function idbGet(k){ try{ const db=await idbOpen(); return await new Promise((res,rej)=>{ const tx=db.transaction('kv','readonly'); const rq=tx.objectStore('kv').get(k); rq.onsuccess=()=>res(rq.result); rq.onerror=()=>rej(rq.error); }); }catch(e){ return null; } }
+async function idbDel(k){ try{ const db=await idbOpen(); await new Promise((res,rej)=>{ const tx=db.transaction('kv','readwrite'); tx.objectStore('kv').delete(k); tx.oncomplete=res; tx.onerror=()=>rej(tx.error); }); }catch(e){} }
+
+const FS_COLOR = { sub:'var(--sub)', good:'var(--good)', mid:'var(--warn)', bad:'var(--bad)' };
+function setFsStatus(t, tone){
+  const el=document.getElementById('fsStatus');
+  if(el){ el.textContent=t; el.style.color=FS_COLOR[tone||'sub']||FS_COLOR.sub; }
+}
+function fsFileTypes(){ return [{ description:'JSON 配置', accept:{ 'application/json':['.json'] } }]; }
+
+/* 防抖自动保存：输入停顿 800ms 后写入本地文件 */
+function scheduleFileSave(){
+  if(!fileHandle) return;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(()=>writeHandle(fileHandle), 800);
+}
+async function writeHandle(h){
+  try{
+    const w = await h.createWritable();
+    await w.write(JSON.stringify(state, null, 1));   // 缩进保存，方便直接用编辑器修改
+    await w.close();
+    setFsStatus('已保存到 「'+h.name+'」 · '+new Date().toLocaleTimeString('zh-CN'), 'good');
+  }catch(e){
+    setFsStatus('保存失败：'+((e&&e.message)||e)+'（点击「立即保存」重新授权）', 'bad');
+  }
+}
+
+document.getElementById('fsPick').onclick = async ()=>{
+  if(!window.showSaveFilePicker){ alert('当前浏览器不支持本地存档（需 Chrome / Edge 等）。请改用下方「导出配置JSON」手动保存。'); return; }
+  try{
+    fileHandle = await window.showSaveFilePicker({ suggestedName:'满资源推演配置.json', types:fsFileTypes() });
+    await idbSet(FS_KEY, fileHandle);
+    await writeHandle(fileHandle);
+  }catch(e){ if(!e || e.name!=='AbortError') alert('选择文件失败：'+((e&&e.message)||e)); }
+};
+
+document.getElementById('fsSave').onclick = ()=>{
+  if(!fileHandle){ alert('请先「选择/新建存档文件」。'); return; }
+  writeHandle(fileHandle);
+};
+
+document.getElementById('fsReload').onclick = async ()=>{
+  try{
+    let h = fileHandle;
+    if(!h){
+      if(!window.showOpenFilePicker){ alert('当前浏览器不支持本地存档，请改用「导出配置JSON」。'); return; }
+      [h] = await window.showOpenFilePicker({ types:fsFileTypes(), multiple:false });
+      fileHandle = h; await idbSet(FS_KEY, h);
+    }
+    const f = await h.getFile();
+    state = hydrate(JSON.parse(await f.text()));
+    document.getElementById('maxDays').value = state.maxDays;
+    persist(); renderAll();
+    setFsStatus('已从 「'+h.name+'」 载入','good');
+  }catch(e){ if(!e || e.name!=='AbortError') alert('载入失败：'+((e&&e.message)||e)); }
+};
+
+document.getElementById('fsForget').onclick = ()=>{
+  fileHandle = null; idbDel(FS_KEY);
+  setFsStatus('已解除关联（本地文件保留，仅取消自动保存）');
+};
+
+/* 启动时尝试恢复上次关联的存档文件；恢复后首次写入可能需用户点击授权 */
+(async ()=>{
+  if(!window.showSaveFilePicker){ setFsStatus('当前浏览器不支持本地存档，请用「导出配置JSON」'); return; }
+  const h = await idbGet(FS_KEY);
+  if(h){
+    fileHandle = h;
+    setFsStatus('已关联 「'+h.name+'」（若提示授权，点「立即保存」确认一次即可自动续存）','mid');
+  }
+})();
+
+/* 初始化 */
+renderAll();
+</script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "name": "装备洗练模拟器 - 风林火山",
+  "short_name": "洗练模拟器",
+  "start_url": "./装备洗练模拟器.html",
+  "display": "standalone",
+  "background_color": "#0e1320",
+  "theme_color": "#0e1320",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

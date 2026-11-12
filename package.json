@@ -1,0 +1,12 @@
+{
+  "name": "wx-refine-simulator-pwa",
+  "version": "1.0.0",
+  "description": "本地 PWA：装备洗练模拟器",
+  "scripts": {
+    "serve": "http-server -c-1 -p 8765",
+    "build-zip": "zip -r wx-refine-simulator-pwa.zip . -x node_modules/** -x *.DS_Store"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}

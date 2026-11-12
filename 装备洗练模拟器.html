@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <link rel="manifest" href="./manifest.json">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>装备洗练模拟器 · 风林火山</title>
+<style>
+:root{color-scheme:dark;--bg:#0e1320;--panel:#161e2e;--line:#2b374e;--text:#e7edf7;--muted:#9aabc3;--accent:#80aaff;--gold:#e4be78}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top right,#202e4833,transparent 60%),var(--bg);color:var(--text);font:14px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
+main{max-width:1400px;margin:auto;padding:32px 28px 50px}header{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:25px}
+h1{font-size:27px;margin:3px 0 6px;letter-spacing:1px}h2{font-size:17px;margin:0 0 6px}h3{font-size:14px;margin:0 0 10px}
+p{margin:4px 0}.eyebrow{font-size:11px;letter-spacing:3px;color:var(--gold)}.muted,small{color:var(--muted)}small{font-size:12px}
+.tag{border:1px solid var(--line);border-radius:24px;padding:5px 13px;color:var(--gold);font-size:12px;white-space:nowrap}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:10px}.spread{justify-content:space-between}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}.metric,.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px}
+.metric{padding:18px 20px}.metric strong{display:block;font-size:28px;font-variant-numeric:tabular-nums;margin-top:5px}.metric span{color:var(--muted);font-size:12px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:20px;align-items:start}.panel{padding:22px;margin-bottom:20px;min-width:0}
+.slots{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:20px 0}.slot{border:1px solid var(--line);border-top:3px solid var(--quality,#526078);border-radius:10px;background:#101725;padding:14px 10px;text-align:center;min-width:0}
+.slot.locked{background:#263045;border-color:#a89065}.slot .number{font-size:11px;color:var(--muted)}.slot .attr{font-size:16px;font-weight:600;margin:18px 0 3px}.slot .quality{color:var(--quality,var(--muted));font-size:12px;margin-bottom:16px}.slot button{width:100%}
+button,input,select{font:inherit;color:var(--text);background:#101828;border:1px solid #394862;border-radius:7px;padding:8px 11px}
+button{cursor:pointer;transition:background .15s}button:hover:not(:disabled){background:#2b3b58}button.primary{background:#709bf0;color:#091425;border-color:#709bf0;font-weight:650}button.stop{background:#6c343f;border-color:#ad6972}
+button:disabled{opacity:.45;cursor:not-allowed}button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+input[type=number]{width:95px;font-variant-numeric:tabular-nums}input[type=checkbox]{accent-color:#80aaff;width:16px;height:16px;vertical-align:middle}label{cursor:pointer}
+.controls{border-top:1px solid var(--line);padding-top:17px;display:grid;gap:13px}.target{background:#101828;border:1px solid var(--line);padding:13px;border-radius:9px}.target .row{margin-top:8px}
+.progress{height:5px;background:#29354b;border-radius:6px;margin:15px 0 8px;overflow:hidden}.progress div{background:var(--gold);height:100%;width:0;transition:width .1s}
+#status{font-size:13px;min-height:24px;color:var(--gold)}.notice{padding:12px 15px;border-left:3px solid var(--gold);background:#e4be7808;margin:12px 0;font-size:12px;color:var(--muted);border-radius:4px}
+table{width:100%;border-collapse:collapse;font-size:12px}td,th{padding:9px 5px;border-bottom:1px solid var(--line);text-align:left}th{font-weight:500;color:var(--muted)}td:last-child,th:last-child{text-align:right}
+.table-scroll{max-height:355px;overflow:auto}table input[type=number]{width:82px;padding:5px 7px}thead{position:sticky;top:0;background:var(--panel);z-index:1}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:7px;background:var(--quality)}
+details{border-top:1px solid var(--line);padding-top:14px;margin-top:15px}summary{cursor:pointer;color:var(--accent);font-size:13px;margin-bottom:12px}
+.bar{height:4px;background:#2a3548;margin:4px 0}.bar i{display:block;height:100%;background:var(--quality,var(--accent))}.stats-row{display:grid;grid-template-columns:55px 1fr 105px;align-items:center;gap:10px;font-size:12px;margin:13px 0}.stats-row .count{text-align:right;font-variant-numeric:tabular-nums}
+.log{max-height:210px;overflow:auto;padding:0;list-style:none;margin:10px 0 0}.log li{padding:10px 0;border-bottom:1px solid var(--line);font-size:12px;color:var(--muted)}.log time{color:#c2d0e3;margin-right:8px}
+.storage{border-top:1px solid var(--line);padding-top:14px;margin-top:18px}.storage button{font-size:12px}.danger{color:#ffa6a6}
+.error{color:#ffa6a6!important}.foot{text-align:center;color:var(--muted);font-size:12px;margin-top:20px}a{color:var(--accent)}#configState{margin-top:9px;font-size:12px;color:var(--gold)}#fileInput{display:none}
+@media(max-width:1150px){.layout{grid-template-columns:minmax(0,1fr)}.settings{display:grid;grid-template-columns:1fr 1fr;gap:20px}.settings>.panel{margin:0}.slots .attr{font-size:17px}}
+@media(max-width:650px){main{padding:20px 14px}.metrics{grid-template-columns:1fr 1fr}.metric{padding:13px}.metric strong{font-size:23px}.slots{grid-template-columns:repeat(2,1fr)}.slots .slot:last-child{grid-column:1/-1}.panel{padding:16px}.settings{display:block}.settings>.panel{margin-bottom:20px}header{align-items:start}h1{font-size:22px}.tag{display:none}.stats-row{grid-template-columns:45px 1fr 95px}}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div><div class="eyebrow">风林火山 / 数值实验室</div><h1>装备洗练模拟器</h1><p class="muted">保留好词条，观察概率与资源成本。</p></div>
+    <span class="tag">本地运行 · 五孔全开 · 无保底模型</span>
+  </header>
+  <div class="metrics">
+    <div class="metric"><span>累计洗练次数</span><strong id="rounds">0</strong><small>一次同时刷新所有未锁孔</small></div>
+    <div class="metric"><span>累计消耗白玉</span><strong id="white">0</strong><small>按每次实际费用累计</small></div>
+    <div class="metric"><span>累计消耗彩玉</span><strong id="color">0</strong><small>锁定词条数 × 单条锁定费用</small></div>
+    <div class="metric"><span>累计新生成红词条</span><strong id="reds">0</strong><small id="draws">共生成 0 条，不含锁定保留</small></div>
+  </div>
+  <div class="layout">
+    <div>
+      <section class="panel">
+        <div class="row spread"><div><h2>当前装备</h2><p class="muted">五个孔位独立抽取，锁定后保证词条不重复（全局唯一）。</p></div><button id="unlock">解除全部锁定</button></div>
+        <div id="slots" class="slots"></div>
+        <div class="row spread"><span id="cost" class="muted"></span><small id="odds"></small></div>
+        <div class="controls">
+          <div class="row">
+            <button id="once" class="primary">洗练一次</button>
+            <button id="batch100">连续 100 次</button>
+            <button id="batch1000">连续 1,000 次</button>
+            <button id="stop" class="stop" disabled>停止洗练</button>
+          </div>
+          <div class="row"><label for="batchCount">自定义次数</label><input id="batchCount" type="number" min="1" max="100000" step="1" value="10000"><button id="custom">开始批量</button><small>最多 100,000 次，可随时停止</small></div>
+          <div class="target">
+            <label><input id="targetEnabled" type="checkbox"> 新生成词条命中目标后立即停止</label>
+            <div class="row" style="margin-top:8px">
+            <button id="addTarget" class="primary">添加目标</button>
+            <label style="margin-left:10px"><input id="targetAutoLock" type="checkbox"> 自动锁定命中孔位</label>
+          </div>
+          <div id="targetsContainer" style="margin-top:10px"></div>
+          <small>目标上限 5 个；每个目标由 属性 + 最低品质 + （若为红）可选的最小满值比例组成。自动锁定时会将命中的孔位锁定并继续洗练，直到所有目标达到。</small>
+          </div>
+        </div>
+        <div class="progress"><div id="progress"></div></div>
+        <div id="status" role="status" aria-live="polite">准备就绪，点击「洗练一次」生成首组词条。</div>
+      </section>
+      <section class="panel">
+        <div class="row spread"><div><h2>抽取分布</h2><p class="muted">记录全部新生成词条，而非当前装备或洗练次数。</p></div><span class="tag" id="ruleVersion">规则 #1</span></div>
+        <div id="qualityStats"></div>
+        <details open><summary>红色词条的满值比例分布</summary>
+          <small>只统计新增红词条的二次抽取；以下概率以“已经出红”为前提。</small>
+          <div id="redStats"></div><small id="redLegacy"></small>
+        </details>
+        <details><summary>查看 21 种属性的累计分布</summary><div class="table-scroll"><table><thead><tr><th>属性</th><th>累计条数</th><th>实测概率</th><th>当前理论概率</th></tr></thead><tbody id="attrStats"></tbody></table></div></details>
+        <p class="notice">修改规则后，累计统计仍包含旧规则的抽取结果，因此可能与当前理论概率不同。需要纯净对照时，请重置本轮实验。</p>
+        <details><summary>计算口径与默认概率来源</summary>
+          <p class="muted">先按属性权重抽类型，再独立按品质权重抽颜色。默认普通属性权重为1，六种具体免疫属性为2，免控为1；可在右侧修改。每个未锁孔位独立抽取，各次之间也独立，无保底。</p>
+          <p class="muted">品质概率：白65%、绿20%、蓝11%、紫2.4%、橙1.2%、红0.4%。出红后再独立抽取满值比例区间，默认四档权重为50、30、15、5；区间内以0.1个百分点为步长等概率抽取，最后一档含100%。此为自定义模拟规则，不是官方数值分布。</p>
+          <p class="muted">例如“满值比例83.4%”表示该属性上限的83.4%，不是直接增加83.4%的攻击或其他属性。本模拟器不模拟属性具体上限、装备基础属性增长、开孔、免费特权或游戏内隐藏机制。</p>
+          <p class="muted">一次至少出一条红的概率 = 1 − (1 − 单孔红色概率)^未锁孔数。出现概率不等于保证次数。</p>
+          <p><a href="https://cp.chinac.com/guide/19106.html" target="_blank" rel="noopener noreferrer">公开攻略：品质概率</a> · <a href="https://wiki.biligame.com/xyzwgame/?curid=1066" target="_blank" rel="noopener noreferrer">BWIKI：材料与锁定消耗</a></p>
+          <small>本工具为自定义数值模型，不代表官方或私服的真实服务端逻辑。</small>
+        </details>
+      </section>
+      <section class="panel"><h2>操作记录</h2><small>记录开始、完成、停止和规则变更，保留最近 50 条；不会逐条输出大批量结果。</small><ul id="log" class="log"></ul></section>
+    </div>
+    <aside class="settings">
+      <section class="panel">
+        <h2>概率实验台</h2><p class="muted">输入相对权重，自动换算实际概率。</p>
+        <div class="notice">权重无需凑满100。设为0可禁用一项；每组权重总和必须大于0。点击应用后生效。</div>
+        <h3>品质权重</h3>
+        <table><thead><tr><th>品质</th><th>权重</th><th>实际概率</th></tr></thead><tbody id="qualityConfig"></tbody></table>
+        <details open><summary>出红后二次抽取 · 满值比例</summary>
+          <small>四档单独归一化，不影响出红率。左闭右开，最后一档包含100%。</small>
+          <table><thead><tr><th>满值区间</th><th>权重</th><th>红内概率</th></tr></thead><tbody id="redConfig"></tbody></table>
+        </details>
+        <details open><summary>属性权重 · 21 种</summary><div class="table-scroll"><table><thead><tr><th>属性</th><th>权重</th><th>实际概率</th></tr></thead><tbody id="attrConfig"></tbody></table></div></details>
+        <div class="row" style="margin-top:15px"><button id="apply" class="primary">应用规则</button><button id="defaults">填入默认规则</button></div>
+        <p id="configState" role="status">当前使用默认规则。</p>
+      </section>
+      <section class="panel">
+        <h2>材料与实验</h2><p class="muted">以下费用也在「应用规则」后生效。</p>
+        <div class="row" style="margin-top:14px"><label for="whiteCost">每次白玉</label><input id="whiteCost" type="number" min="0" max="1000000" step="1" value="100"></div>
+        <div class="row" style="margin:12px 0"><label for="lockCost">每条锁定彩玉</label><input id="lockCost" type="number" min="0" max="1000000" step="1" value="1"></div>
+        <small>例：锁3条，单价1彩玉，每次扣3彩玉。修改单价不会重算历史消耗。全锁时无法洗练，也不扣材料。</small>
+        <div class="storage">
+          <h3>本地存档</h3><p id="saveState" class="muted">浏览器缓存自动保存；重要实验请导出文件备份。</p>
+          <div class="row" style="margin:12px 0"><button id="export">导出 JSON</button><button id="import">导入 JSON</button></div>
+          <input id="fileInput" type="file" accept=".json,application/json">
+          <button id="reset" class="danger">重置本轮实验</button>
+          <p><small>重置清除词条、锁定、次数与消耗，保留已应用规则；会先请求确认。导入替换前也会请求确认。</small></p>
+        </div>
+      </section>
+    </aside>
+  </div>
+  <div class="foot">仅本地计算，不连接游戏，不上传数据。存档版本：2，兼容旧版1</div>
+</main>
+<script>
+'use strict';
+// 固定属性顺序用于存档索引；新增属性时需同步升级存档版本并编写迁移。
+const ATTRS=['攻击','暴击','破甲','精准','爆伤','技能伤害','免控','沉默免疫','灼烧免疫','流血免疫','中毒免疫','冰冻免疫','眩晕免疫','防御','减伤','破甲抵抗','暴击抵抗','爆伤抵抗','速度','血量','格挡'];
+const QUALITIES=['白色','绿色','蓝色','紫色','橙色','红色'];
+const COLORS=['#c6ceda','#73d6a0','#7eafff','#be93ff','#f2b05f','#ff8189'];
+// 使用十分之一百分点的整数格点，避免浮点舍入将84.99误显示为下一档的85。
+const RED_BANDS=[{label:'80%～<85%',min:800,max:849},{label:'85%～<90%',min:850,max:899},{label:'90%～<95%',min:900,max:949},{label:'95%～100%',min:950,max:1000}];
+const KEY='fenglin-refine-simulator-v1';
+const $=id=>document.getElementById(id);
+const fmt=n=>n.toLocaleString('zh-CN');
+const pct=n=>(n*100).toFixed(3)+'%';
+function defaultConfig(){return {quality:[65,20,11,2.4,1.2,.4],attributes:ATTRS.map(x=>x.endsWith('免疫')?2:1),redBands:[50,30,15,5],whiteCost:100,lockCost:1};}
+function emptyStats(){return {rounds:0,white:0,color:0,draws:0,qualities:Array(6).fill(0),attributes:Array(21).fill(0),redBands:Array(4).fill(0),legacyReds:0};}
+function freshState(){return {version:2,config:defaultConfig(),ruleVersion:1,slots:Array(5).fill(null),locked:Array(5).fill(false),stats:emptyStats(),targets:[],logs:[]};}
+let state=freshState(),running=false,dirty=false,timer=null,job=null;
+
+// 权重先归一化，再构造累计区间。0权重项永远不会被抽中。
+function probabilities(weights){const total=weights.reduce((a,b)=>a+b,0);return weights.map(w=>w/total);}
+function pick(weights,rng=Math.random){
+  let n=rng()*weights.reduce((a,b)=>a+b,0),last=-1;
+  for(let i=0;i<weights.length;i++){if(weights[i]===0)continue;last=i;n-=weights[i];if(n<0)return i;}
+  return last;
+}
+function validateConfig(c){
+  if(!c||typeof c!=='object')throw Error('规则格式错误。');
+  for(const [key,length] of [['quality',6],['attributes',21],['redBands',4]]){
+    const arr=c[key];
+    if(!Array.isArray(arr)||arr.length!==length||!arr.every(n=>Number.isFinite(n)&&n>=0&&n<=1000000)||arr.reduce((a,b)=>a+b,0)<=0)throw Error('每组权重必须为0～1,000,000之间的有效数值，且至少一项大于0。');
+  }
+  for(const key of ['whiteCost','lockCost'])if(!Number.isSafeInteger(c[key])||c[key]<0||c[key]>1000000)throw Error('材料费用必须为0～1,000,000之间的整数。');
+  return c;
+}
+function log(message){
+  state.logs.unshift({time:new Date().toLocaleTimeString('zh-CN',{hour12:false}),message});
+  state.logs.length=Math.min(state.logs.length,50);
+}
+function status(message,error=false){$('status').textContent=message;$('status').classList.toggle('error',error);}
+function save(){
+  try{localStorage.setItem(KEY,JSON.stringify(state));$('saveState').textContent='已自动保存到本浏览器。重要实验请导出 JSON 备份。';}
+  catch{$('saveState').textContent='浏览器缓存保存失败，请导出 JSON 保存实验。';}
+}
+// 导入和缓存都视为不可信输入：验证索引、计数总和与安全整数，防止坏存档污染实验。
+function validateState(s){
+  if(!s||![1,2].includes(s.version))throw Error('不支持的存档版本。');
+  s=structuredClone(s);
+  // 旧版从未记录满值比例：仅补规则和“未记录”计数，绝不重新抽取旧词条。
+  if(s.version===1){
+    if(!s.config||!s.stats||!Array.isArray(s.stats.qualities)||!Array.isArray(s.slots))throw Error('旧版存档结构无效。');
+    s.config.redBands=[50,30,15,5];s.stats.redBands=[0,0,0,0];s.stats.legacyReds=s.stats.qualities[5];
+    s.slots.forEach(slot=>{if(slot&&slot.quality===5){slot.redBand=null;slot.redValue=null;}});
+    s.version=2;
+  }
+  validateConfig(s.config);
+  const integer=n=>Number.isSafeInteger(n)&&n>=0;
+  if(!integer(s.ruleVersion)||s.ruleVersion<1)throw Error('规则版本无效。');
+  if(!Array.isArray(s.slots)||s.slots.length!==5||!Array.isArray(s.locked)||s.locked.length!==5)throw Error('存档必须包含五个孔位。');
+  s.slots.forEach((slot,i)=>{
+    if(typeof s.locked[i]!=='boolean'||(!slot&&s.locked[i]))throw Error('锁定状态无效。');
+    if(slot!==null&&(!slot||!integer(slot.attr)||slot.attr>=21||!integer(slot.quality)||slot.quality>=6))throw Error('词条索引无效。');
+    if(slot&&slot.quality===5){
+      if(slot.redBand===null&&slot.redValue===null)return;
+      if(!integer(slot.redBand)||slot.redBand>=4||!integer(slot.redValue))throw Error('红色词条数值无效。');
+      const band=RED_BANDS[slot.redBand];
+      if(slot.redValue<band.min||slot.redValue>band.max)throw Error('红色词条数值与所属区间不符。');
+    }else if(slot&&(slot.redBand!==undefined||slot.redValue!==undefined))throw Error('非红色词条不能包含红色数值。');
+  });
+  const t=s.stats;
+  if(!t||!['rounds','white','color','draws'].every(k=>integer(t[k])))throw Error('消耗或次数无效。');
+  for(const [key,len] of [['qualities',6],['attributes',21]]){
+    if(!Array.isArray(t[key])||t[key].length!==len||!t[key].every(integer)||t[key].reduce((a,b)=>a+b,0)!==t.draws)throw Error('统计总数不一致。');
+  }
+  if(t.draws<t.rounds||t.draws>t.rounds*5)throw Error('孔位抽取次数与洗练次数不符。');
+  if(!integer(t.legacyReds)||!Array.isArray(t.redBands)||t.redBands.length!==4||!t.redBands.every(integer)||t.redBands.reduce((a,b)=>a+b,0)+t.legacyReds!==t.qualities[5])throw Error('红色区间统计与红词条总数不一致。');
+  if(s.slots.filter(slot=>slot&&slot.quality===5&&slot.redValue===null).length>t.legacyReds)throw Error('旧红词条数量与历史统计不符。');
+  if(!Array.isArray(s.logs)||s.logs.length>50||!s.logs.every(x=>x&&typeof x.time==='string'&&x.time.length<=40&&typeof x.message==='string'&&x.message.length<=500))throw Error('操作记录格式无效。');
+  // targets 验证：最多 5 个，每个带属性索引、最低品质和可选的红色最小满值（以十分之一百分点为单位）
+  if(!Array.isArray(s.targets)||s.targets.length>5)throw Error('目标配置无效。');
+  s.targets.forEach(t=>{
+    if(!t||typeof t!=='object')throw Error('目标格式无效。');
+    if(!Number.isInteger(t.attr)||t.attr<-1||t.attr>=21)throw Error('目标属性索引无效。');
+    if(!Number.isInteger(t.quality)||t.quality<0||t.quality>5)throw Error('目标品质索引无效。');
+    if(t.minRed!==null&&t.minRed!==undefined){if(!Number.isInteger(t.minRed)||t.minRed<0||t.minRed>1000)throw Error('目标红内最小值无效。');}
+  });
+  return structuredClone(s);
+}
+function buildConfig(){
+  $('qualityConfig').innerHTML=QUALITIES.map((name,i)=>`<tr><td><span class="dot" style="--quality:${COLORS[i]}"></span>${name}</td><td><input aria-label="${name}权重" data-kind="quality" data-index="${i}" type="number" min="0" max="1000000" step="any"></td><td data-prob="quality-${i}"></td></tr>`).join('');
+  $('attrConfig').innerHTML=ATTRS.map((name,i)=>`<tr><td>${name}</td><td><input aria-label="${name}权重" data-kind="attributes" data-index="${i}" type="number" min="0" max="1000000" step="any"></td><td data-prob="attributes-${i}"></td></tr>`).join('');
+  $('redConfig').innerHTML=RED_BANDS.map((band,i)=>`<tr><td>${band.label.replace('<','&lt;')}</td><td><input aria-label="红色第${i+1}档权重" data-kind="redBands" data-index="${i}" type="number" min="0" max="1000000" step="any"></td><td data-prob="redBands-${i}"></td></tr>`).join('');
+}
+function fillConfig(config){
+  document.querySelectorAll('[data-kind]').forEach(el=>el.value=config[el.dataset.kind][Number(el.dataset.index)]);
+  $('whiteCost').value=config.whiteCost;$('lockCost').value=config.lockCost;previewConfig();
+}
+function readDraft(){
+  const read=el=>el.value.trim()===''?NaN:Number(el.value);
+  return {quality:Array.from(document.querySelectorAll('[data-kind="quality"]'),read),attributes:Array.from(document.querySelectorAll('[data-kind="attributes"]'),read),redBands:Array.from(document.querySelectorAll('[data-kind="redBands"]'),read),whiteCost:read($('whiteCost')),lockCost:read($('lockCost'))};
+}
+function previewConfig(){
+  const c=readDraft();
+  for(const kind of ['quality','attributes','redBands']){
+    const values=c[kind],valid=values.every(n=>Number.isFinite(n)&&n>=0&&n<=1000000)&&values.some(n=>n>0);
+    const p=valid?probabilities(values):values.map(()=>NaN);
+    p.forEach((n,i)=>document.querySelector(`[data-prob="${kind}-${i}"]`).textContent=valid?pct(n):'无效');
+  }
+}
+function draftChanged(){
+  dirty=true;previewConfig();$('configState').textContent='修改尚未应用；请应用规则后再开始洗练。';renderControls();
+}
+function renderControls(){
+  const locked=state.locked.filter(Boolean).length,free=5-locked,c=state.config;
+  $('cost').textContent=`本次费用：${fmt(c.whiteCost)} 白玉 + ${fmt(locked*c.lockCost)} 彩玉 · 已锁 ${locked}/5`;
+  const red=probabilities(c.quality)[5];
+  $('odds').textContent=`至少出一条红：${pct(1-Math.pow(1-red,free))}`;
+  for(const id of ['once','batch100','batch1000','custom'])$(id).disabled=running||dirty||free===0;
+  $('stop').disabled=!running;
+  for(const id of ['unlock','apply','defaults','reset','import','export','batchCount','targetEnabled','targetAttr','targetQuality','whiteCost','lockCost'])$(id).disabled=running;
+  document.querySelectorAll('[data-kind]').forEach(el=>el.disabled=running);
+}
+function render(){
+  const t=state.stats;
+  $('rounds').textContent=fmt(t.rounds);$('white').textContent=fmt(t.white);$('color').textContent=fmt(t.color);$('reds').textContent=fmt(t.qualities[5]);$('draws').textContent=`共生成 ${fmt(t.draws)} 条，不含锁定保留`;
+  $('ruleVersion').textContent=`规则 #${state.ruleVersion}`;
+  $('slots').innerHTML=state.slots.map((slot,i)=>`<div class="slot ${state.locked[i]?'locked':''}" style="--quality:${slot?COLORS[slot.quality]:'#526078'}"><div class="number">孔位 0${i+1} · 已开启</div><div class="attr">${slot?ATTRS[slot.attr]:'等待洗练'}</div><div class="quality">${slot?QUALITIES[slot.quality]:'暂无词条'}${slot&&slot.quality===5?'<br>'+redValueLabel(slot):''}</div><button data-lock="${i}" aria-label="孔位${i+1}${state.locked[i]?'解锁':'锁定'}" aria-pressed="${state.locked[i]}" ${running||!slot?'disabled':''}>${state.locked[i]?'已锁定 · 解锁':'锁定词条'}</button></div>`).join('');
+  const qp=probabilities(state.config.quality),ap=probabilities(state.config.attributes);
+  $('qualityStats').innerHTML=QUALITIES.map((name,i)=>{const actual=t.draws?t.qualities[i]/t.draws:0;return `<div class="stats-row" style="--quality:${COLORS[i]}"><span>${name}</span><div><div class="bar"><i style="width:${actual*100}%"></i></div><small>实测 ${pct(actual)} / 理论 ${pct(qp[i])}</small></div><span class="count">${fmt(t.qualities[i])} 条</span></div>`;}).join('');
+  const rp=probabilities(state.config.redBands),recorded=t.redBands.reduce((a,b)=>a+b,0);
+  $('redStats').innerHTML=`<table><thead><tr><th>满值区间</th><th>条数</th><th>红内实测</th><th>当前理论</th></tr></thead><tbody>${RED_BANDS.map((band,i)=>`<tr><td>${band.label.replace('<','&lt;')}</td><td>${fmt(t.redBands[i])}</td><td>${pct(recorded?t.redBands[i]/recorded:0)}</td><td>${pct(rp[i])}</td></tr>`).join('')}</tbody></table>`;
+  $('redLegacy').textContent=`已有数值记录 ${fmt(recorded)} 条；旧版未记录 ${fmt(t.legacyReds)} 条，不计入红内实测比例。`;
+  $('attrStats').innerHTML=ATTRS.map((name,i)=>`<tr><td>${name}</td><td>${fmt(t.attributes[i])}</td><td>${pct(t.draws?t.attributes[i]/t.draws:0)}</td><td>${pct(ap[i])}</td></tr>`).join('');
+  $('log').replaceChildren();
+  state.logs.forEach(entry=>{const li=document.createElement('li'),time=document.createElement('time');time.textContent=entry.time;li.append(time,document.createTextNode(entry.message));$('log').append(li);});
+  renderControls();
+}
+function redValueLabel(slot){return slot.redValue===null?'旧词条 · 数值未记录':`满值比例 ${(slot.redValue/10).toFixed(1)}%`;}
+// 二次抽取仅在新生成的红色词条上触发，不改变品质概率，也不额外消耗材料。
+function rollRed(weights,rng=Math.random){
+  const redBand=pick(weights,rng),band=RED_BANDS[redBand];
+  return {redBand,redValue:band.min+Math.floor(rng()*(band.max-band.min+1))};
+}
+// 一次洗练是不可拆分的事务：先检查费用安全性，再刷新所有未锁孔，最后统计整次结果。
+// 实现方案 B：保证最终装备上的属性不重复（全局唯一），锁定孔位上的属性始终被排除在抽取池外。
+function refine(s,rng=Math.random){
+  const free=s.locked.reduce((n,lock)=>n+(!lock?1:0),0);
+  if(!free)throw Error('五个孔位已全部锁定，请至少解锁一个孔位。');
+  const white=s.config.whiteCost,color=(5-free)*s.config.lockCost;
+  for(const [key,increment] of [['rounds',1],['white',white],['color',color],['draws',free]]){
+    if(!Number.isSafeInteger(s.stats[key]+increment))throw Error('累计数值达到安全整数上限，请导出并重置实验。');
+  }
+  // 构造初始排除集合：锁定孔位上的属性会被排除，保证不会再出现重复属性
+  const excluded=new Set();
+  s.slots.forEach((slot,i)=>{ if(s.locked[i] && slot) excluded.add(slot.attr); });
+  // 可用属性数量检查（仅统计权重大于0且未被排除的属性）
+  const availableCount=s.config.attributes.reduce((n,w,i)=> n + (w>0 && !excluded.has(i) ? 1:0),0);
+  if(availableCount < free) throw Error('可用属性不足以保证唯一性：请先解锁孔位或减少已锁属性/调整权重，操作已取消。');
+  // pick with exclusions：对被排除的属性将权重屏蔽为0
+  const pickWithExclusions=(weights,excl)=>{const masked=weights.map((w,i)=> excl.has(i) || w<=0 ? 0 : w );return pick(masked,rng);} ;
+  const generated=[];
+  const assignedInThis=[]; // 记录本次洗练已分配的属性，防止同次内重复
+  s.slots.forEach((_,i)=>{
+    if(s.locked[i])return;
+    const curExcluded=new Set(excluded);assignedInThis.forEach(a=>curExcluded.add(a));
+    const attrIndex=pickWithExclusions(s.config.attributes,curExcluded);
+    const slot={attr:attrIndex,quality:pick(s.config.quality,rng)};
+    if(slot.quality===5){Object.assign(slot,rollRed(s.config.redBands,rng));s.stats.redBands[slot.redBand]++;}
+    s.slots[i]=slot;generated.push({slot,idx:i});s.stats.qualities[slot.quality]++;s.stats.attributes[slot.attr]++;assignedInThis.push(slot.attr);
+  });
+  s.stats.rounds++;s.stats.white+=white;s.stats.color+=color;s.stats.draws+=free;
+  return generated;
+}
+function finish(reason,error=false){
+  clearTimeout(timer);timer=null;running=false;
+  if(job){
+    const t=state.stats,b=job.before;
+    const message=`${reason}：执行 ${fmt(job.done)}/${fmt(job.total)} 次，消耗 ${fmt(t.white-b.white)} 白玉、${fmt(t.color-b.color)} 彩玉，新出红 ${fmt(t.qualities[5]-b.reds)} 条。`;
+    status(message,error);log(message);
+  }
+  render();save();job=null;
+}
+// 分帧批量运行，避免长循环阻塞页面；目标命中按“整次洗练”检查，不多扣下一次材料。
+function tick(){
+  if(!running)return;
+  try{
+    for(let n=0;n<50&&job.done<job.total;n++){
+      const generated=refine(state);job.done++;
+      // 生成结果为数组的 {slot,idx}
+      if(job.targetEnabled){
+        if(job.autoLock){
+          for(const item of generated){
+            const slot=item.slot, idx=item.idx;
+            for(const t of job.targets){
+              if(targetMatchesSlot(t,slot) && !state.locked[idx]){state.locked[idx]=true;log(`自动锁定孔位${idx+1}：${ATTRS[slot.attr]} / ${QUALITIES[slot.quality]}。`);}
+            }
+          }
+          // 检查是否所有目标都已满足（至少有一个已锁孔位匹配每个目标）
+          const allSatisfied = job.targets.length>0 && job.targets.every(t=> state.slots.some((s,i)=> s && state.locked[i] && targetMatchesSlot(t,s)));
+          if(allSatisfied){$('progress').style.width=(job.done/job.total*100)+'%';finish('所有目标已达成，自动停止');return;}
+        }else{
+          if(generated.some(item=>job.targets.some(t=>targetMatchesSlot(t,item.slot)))){
+            $('progress').style.width=(job.done/job.total*100)+'%';finish('命中目标，自动停止');return;
+          }
+        }
+      }
+    }
+    $('progress').style.width=(job.done/job.total*100)+'%';
+    if(job.done>=job.total){finish('洗练完成');return;}
+    status(`正在洗练：${fmt(job.done)} / ${fmt(job.total)} 次，锁定状态及规则保持不变。`);render();
+    if(job.done%1000===0)save();
+    timer=setTimeout(tick,16);
+  }catch(error){finish('执行中断：'+error.message,true);} 
+}
+function start(total){
+  if(running)return;
+  if(dirty){status('请先应用概率和费用修改。',true);return;}
+  if(!Number.isInteger(total)||total<1||total>100000){status('批量次数必须为1～100,000的整数。',true);return;}
+  if(state.locked.every(Boolean)){status('五孔已全锁，没有可刷新的词条。',true);return;}
+  running=true;
+  job={total,done:0,target:$('targetEnabled').checked,attr:Number($('targetAttr').value),quality:Number($('targetQuality').value),before:{white:state.stats.white,color:state.stats.color,reds:state.stats.qualities[5]}};
+  log(`开始洗练 ${fmt(total)} 次，锁定 ${state.locked.filter(Boolean).length} 条，使用规则 #${state.ruleVersion}。`);
+  $('progress').style.width='0%';status('开始洗练…');render();save();
+  timer=setTimeout(tick,0);
+}
+function setup(){
+  buildConfig();
+  // 初始化目标 UI
+  $('addTarget').onclick=()=>{ if(state.targets.length>=5){status('目标数量已达上限 5 个。',true);return;} state.targets.push({attr:-1,quality:5,minRed:null}); renderTargets(); save(); };
+  document.getElementById('targetsContainer').addEventListener('input',()=>{readTargetsFromDOM();});
+  renderTargets();
+  let restoreMessage='';
+  try{const raw=localStorage.getItem(KEY);if(raw){state=validateState(JSON.parse(raw));restoreMessage='已恢复浏览器存档；未完成的批量任务不会自动重启。';}}
+  catch{restoreMessage='缓存不可用或存档无效，已开启空白实验。可尝试导入备份。';}
+  fillConfig(state.config);$('configState').textContent=`当前规则 #${state.ruleVersion} 已应用。`;
+  log(restoreMessage||'新实验就绪：五孔全开，默认品质权重和免疫类双倍权重。');render();
+  if(restoreMessage)status(restoreMessage);
+  $('once').addEventListener('click',()=>start(1));
+  $('batch100').addEventListener('click',()=>start(100));
+  $('batch1000').addEventListener('click',()=>start(1000));
+  $('custom').addEventListener('click',()=>start(Number($('batchCount').value)));
+  $('stop').onclick=()=>finish('用户主动停止');
+  $('slots').onclick=event=>{
+    const button=event.target.closest('[data-lock]');
+    // 如果没有找到按钮、正在运行或按钮被禁用，则忽略点击
+    if(!button || running || button.disabled) return;
+    const i=Number(button.dataset.lock);
+    const slot = state.slots[i];
+    if(!slot) return;
+    // 切换锁定状态，立即更新按钮的 aria-pressed 以提高响应性
+    state.locked[i] = !state.locked[i];
+    button.setAttribute('aria-pressed', state.locked[i]);
+    log(`孔位${i+1} ${state.locked[i] ? '锁定' : '解锁'}：${ATTRS[slot.attr]} / ${QUALITIES[slot.quality]}。`);
+    render();save();
+  };
+  $('unlock').onclick=()=>{state.locked.fill(false);log('已解除全部锁定。');render();save();};
+  document.querySelectorAll('[data-kind],#whiteCost,#lockCost').forEach(el=>el.addEventListener('input',draftChanged));
+  // 目标相关辅助函数
+  function targetMatchesSlot(t,slot){
+    if(t.attr!==-1 && slot.attr!==t.attr) return false;
+    if(slot.quality < t.quality) return false;
+    if(t.minRed!==null&&t.minRed!==undefined){ if(slot.quality!==5) return false; if(slot.redValue===null) return false; if(slot.redValue < t.minRed) return false; }
+    return true;
+  }
+  function renderTargets(){
+    const container=$('targetsContainer');container.innerHTML='';
+    state.targets.forEach((t,i)=>{
+      const row=document.createElement('div');row.className='row target-row';row.dataset.index=i;
+      const attrSel=document.createElement('select');attrSel.className='target-attr';attrSel.innerHTML=`<option value="-1">任意属性</option>`+ATTRS.map((n,idx)=>`<option value="${idx}">${n}</option>`).join('');attrSel.value=t.attr;
+      const qualSel=document.createElement('select');qualSel.className='target-quality';qualSel.innerHTML=QUALITIES.map((n,idx)=>`<option value="${idx}">${n}</option>`).join('');qualSel.value=t.quality;
+      const minRed=document.createElement('input');minRed.className='target-minred';minRed.type='number';minRed.min=0;minRed.max=100;minRed.step=0.1;minRed.placeholder='可选（%）';minRed.value=t.minRed===null?'':(t.minRed/10).toFixed(1);
+      const remove=document.createElement('button');remove.type='button';remove.textContent='删除';remove.onclick=()=>{state.targets.splice(i,1);renderTargets();save();};
+      row.appendChild(attrSel);row.appendChild(qualSel);row.appendChild(minRed);row.appendChild(remove);container.appendChild(row);
+    });
+  }
+  function readTargetsFromDOM(){
+    const rows=Array.from(document.querySelectorAll('.target-row'));
+    state.targets=rows.map(r=>{const a=Number(r.querySelector('.target-attr').value);const q=Number(r.querySelector('.target-quality').value);const m=r.querySelector('.target-minred').value.trim();return {attr:a,quality:q,minRed:m===''?null:Math.round(Number(m)*10)};});
+  }
+  $('apply').onclick=()=>{
+    try{const c=validateConfig(readDraft());state.config=c;state.ruleVersion++;dirty=false;$('configState').textContent=`规则 #${state.ruleVersion} 已应用，历史消耗保持不变。`;log($('configState').textContent);status('新规则已应用。');render();save();}
+    catch(error){$('configState').textContent=error.message;status(error.message,true);} 
+  };
+  $('defaults').onclick=()=>{fillConfig(defaultConfig());draftChanged();};
+  $('reset').onclick=()=>{
+    if(!confirm('清空当前词条、锁定、全部统计和记录？已应用规则保留。请先导出重要实验。'))return;
+    const config=state.config,version=state.ruleVersion;state=freshState();state.config=config;state.ruleVersion=version;dirty=false;fillConfig(config);
+    $('configState').textContent=`当前规则 #${version} 已应用。`;$('progress').style.width='0%';log('本轮实验已重置，保留已应用规则。');status('实验已重置。');render();save();
+  };
+  $('export').onclick=()=>{
+    log('导出已应用规则、当前装备和累计统计；未应用草稿不包含在存档中。');render();save();
+    const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+    a.href=url;a.download=`洗练实验_${new Date().toISOString().replace(/[:.]/g,'-')}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),3000);
+  };
+  $('import').onclick=()=>$('fileInput').click();
+  $('fileInput').onchange=async event=>{
+    const file=event.target.files[0];event.target.value='';if(!file)return;
+    try{
+      if(file.size>1000000)throw Error('文件超过1MB，无法作为本模拟器存档导入。');
+      const loaded=validateState(JSON.parse(await file.text()));
+      if(running)throw Error('正在洗练，请停止后重新导入。');
+      if(!confirm('用导入存档替换当前实验及未应用修改？建议先导出当前实验备份。'))return;
+      state=loaded;dirty=false;fillConfig(state.config);$('configState').textContent=`已导入规则 #${state.ruleVersion}。`;$('progress').style.width='0%';
+      log('已从本地 JSON 文件恢复实验。');status('导入成功。');render();save();
+    }catch(error){status('导入失败：'+error.message,true);} 
+  };
+  // 页面关闭时保存已经执行完成的次数，不记录尚未发生的批量抽取。
+  window.addEventListener('pagehide',()=>{if(running)finish('页面关闭，保存已完成部分');else save();});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden){if(running)finish('页面隐藏，保存已完成部分');else save();}});
+}
+setup();
+</script>
+<script>
+  // 最简 Service Worker 注册，仅用于 PWA 离线体验（可选）
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  }
+</script>
+</body>
+</html>
